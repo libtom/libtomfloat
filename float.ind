@@ -1,0 +1,55 @@
+\begin{theindex}
+
+  \item exponent, \hyperpage{2}
+
+  \indexspace
+
+  \item mantissa, \hyperpage{2}
+  \item mp\_cmp, \hyperpage{16}
+  \item mp\_error\_to\_string, \hyperpage{6}
+  \item MP\_MEM, \hyperpage{5}
+  \item MP\_NO, \hyperpage{5}
+  \item MP\_OKAY, \hyperpage{5}
+  \item MP\_VAL, \hyperpage{5}
+  \item MP\_YES, \hyperpage{5}
+  \item mpf\_abs, \hyperpage{13}
+  \item mpf\_acos, \hyperpage{18}
+  \item mpf\_add, \hyperpage{15}
+  \item mpf\_add\_d, \hyperpage{15}
+  \item mpf\_asin, \hyperpage{18}
+  \item mpf\_atan, \hyperpage{18}
+  \item mpf\_clear, \hyperpage{7}
+  \item mpf\_clear\_multi, \hyperpage{8}
+  \item mpf\_cmp\_d, \hyperpage{16}
+  \item mpf\_const\_0, \hyperpage{11}
+  \item mpf\_const\_d, \hyperpage{11}
+  \item mpf\_const\_ln\_d, \hyperpage{11}
+  \item mpf\_const\_sqrt\_d, \hyperpage{11}
+  \item mpf\_copy, \hyperpage{9}
+  \item mpf\_cos, \hyperpage{18}
+  \item mpf\_div, \hyperpage{15}
+  \item mpf\_div\_2, \hyperpage{16}
+  \item mpf\_div\_d, \hyperpage{15}
+  \item mpf\_exch, \hyperpage{10}
+  \item mpf\_exp, \hyperpage{17}
+  \item mpf\_init, \hyperpage{7}
+  \item mpf\_init\_copy, \hyperpage{8}
+  \item mpf\_init\_multi, \hyperpage{8}
+  \item mpf\_inv, \hyperpage{18}
+  \item mpf\_invsqrt, \hyperpage{18}
+  \item mpf\_ln, \hyperpage{17}
+  \item mpf\_mul, \hyperpage{15}
+  \item mpf\_mul\_2, \hyperpage{16}
+  \item mpf\_mul\_d, \hyperpage{15}
+  \item mpf\_neg, \hyperpage{13}
+  \item mpf\_normalize, \hyperpage{11}
+  \item mpf\_normalize\_to, \hyperpage{11}
+  \item mpf\_pow, \hyperpage{17}
+  \item mpf\_sin, \hyperpage{18}
+  \item mpf\_sqr, \hyperpage{16}
+  \item mpf\_sqrt, \hyperpage{18}
+  \item mpf\_sub, \hyperpage{15}
+  \item mpf\_sub\_d, \hyperpage{15}
+  \item mpf\_tan, \hyperpage{18}
+
+\end{theindex}

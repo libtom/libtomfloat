@@ -1,0 +1,637 @@
+\documentclass[b5paper]{book}
+\usepackage{hyperref}
+\usepackage{makeidx}
+\usepackage{amssymb}
+\usepackage{color}
+\usepackage{alltt}
+\usepackage{graphicx}
+\usepackage{layout}
+\def\union{\cup}
+\def\intersect{\cap}
+\def\getsrandom{\stackrel{\rm R}{\gets}}
+\def\cross{\times}
+\def\cat{\hspace{0.5em} \| \hspace{0.5em}}
+\def\catn{$\|$}
+\def\divides{\hspace{0.3em} | \hspace{0.3em}}
+\def\nequiv{\not\equiv}
+\def\approx{\raisebox{0.2ex}{\mbox{\small $\sim$}}}
+\def\lcm{{\rm lcm}}
+\def\gcd{{\rm gcd}}
+\def\log{{\rm log}}
+\def\ord{{\rm ord}}
+\def\abs{{\mathit abs}}
+\def\rep{{\mathit rep}}
+\def\mod{{\mathit\ mod\ }}
+\renewcommand{\pmod}[1]{\ ({\rm mod\ }{#1})}
+\newcommand{\floor}[1]{\left\lfloor{#1}\right\rfloor}
+\newcommand{\ceil}[1]{\left\lceil{#1}\right\rceil}
+\def\Or{{\rm\ or\ }}
+\def\And{{\rm\ and\ }}
+\def\iff{\hspace{1em}\Longleftrightarrow\hspace{1em}}
+\def\implies{\Rightarrow}
+\def\undefined{{\rm ``undefined"}}
+\def\Proof{\vspace{1ex}\noindent {\bf Proof:}\hspace{1em}}
+\let\oldphi\phi
+\def\phi{\varphi}
+\def\Pr{{\rm Pr}}
+\newcommand{\str}[1]{{\mathbf{#1}}}
+\def\F{{\mathbb F}}
+\def\N{{\mathbb N}}
+\def\Z{{\mathbb Z}}
+\def\R{{\mathbb R}}
+\def\C{{\mathbb C}}
+\def\Q{{\mathbb Q}}
+\definecolor{DGray}{gray}{0.5}
+\newcommand{\emailaddr}[1]{\mbox{$<${#1}$>$}}
+\def\twiddle{\raisebox{0.3ex}{\mbox{\tiny $\sim$}}}
+\def\gap{\vspace{0.5ex}}
+\makeindex
+\begin{document}
+\frontmatter
+\pagestyle{empty}
+\title{LibTomFloat User Manual \\ v0.01}
+\author{Tom St Denis \\ tomstdenis@iahu.ca}
+\maketitle
+This text and the library are hereby placed in the public domain.  This book has been formatted for B5 [176x250] paper using the \LaTeX{} {\em book} 
+macro package.
+
+\vspace{10cm}
+
+\begin{flushright}Open Source.  Open Academia.  Open Minds.
+
+\mbox{ }
+
+Tom St Denis,
+
+Ontario, Canada
+\end{flushright}
+
+\tableofcontents
+\listoffigures
+\mainmatter
+\pagestyle{headings}
+\chapter{Introduction}
+\section{What is LibTomFloat?}
+LibTomFloat is a library of source code that provides multiple precision floating point arithmetic.  It allows developers to manipulate floating
+point numbers of variable precision.  The library was written in portable ISO C source code and depends upon the public domain
+LibTomMath package.
+
+Along with providing the core mathematical operations such as addition and subtraction LibTomFloat also provides various complicated algorithms
+such as trigonometry's sine, cosine and tangent operators as well as Calculus's square root, inverse square root, exponential and logarithm
+operators.  
+
+LibTomFloat has been written for portability and numerical stability and is not particularly optimized for any given platform.  It uses optimal
+algorithms for manipulating the mantissa by using LibTomMath and uses numerically stable series for the various trig and calculus functions.
+
+\section{License}
+LibTomFloat is public domain.
+
+\section{Building LibTomFloat}
+LibTomFloat requires version 0.30 or higher of LibTomMath to be installed in order to build.  Once LibTomMath is installed building LibTomFloat
+is as simple as:
+
+\begin{alltt}
+make
+\end{alltt}
+
+Which will build ``libtomfloat.a'' and along with ``tomfloat.h'' complete an installation of LibTomFloat.  You can also use the make target
+``install'' to automatically build and copy the files (into *NIX specific) locations.  
+
+\begin{alltt}
+make install
+\end{alltt}
+
+\textbf{Note}: LibTomFloat does not use ISO C's native floating point types which means that the standard math library does not have to be
+linked in.  This also means that LibTomFloat will work decently on platforms that do not have a floating point unit.
+
+
+\section{Purpose of LibTomFloat}
+LibTomFloat is as much as an exercise in hardcore math for myself as it is a service to any programmer who needs high precision float point
+data types.  ISO C provides for fairly reasonable precision floating point data types but is limited.  A proper analogy is LibTomFloat solves
+ISO C's floating point problems in the same way LibTomMath solves ISO C's integer data type problems.
+
+A classic example of a good use for large precision floats is long simulations where the numbers are not perfectly stable.  A $128$--bit mantissa
+(for example) can provide for exceptional precision.
+
+That and knowing the value of $e$ to 512 bits is fun.
+
+\section{How the types work}
+
+\index{mantissa} \index{exponent}
+The floating point types are emulated with three components.  The \textbf{mantissa}, the \textbf{exponent} and the \textbf{radix}.
+The mantissa forms the digits of number being represented.  The exponent scales the number to give it a larger range.  The radix controls
+how many bits there are in the mantissa.  The larger the radix the more precise the types become.  
+
+The representation of a number is given by the simple product $m \cdot 2^e$ where $m$ is the mantissa and $e$ the exponent.  Numbers are
+always normalized such that there are $radix$ bits per mantissa.  For example, with $radix = 16$ the number $2$ is represented by 
+$32768 \cdot 2^{-14}$.  A zero is represented by a mantissa of zero and an exponent of one and is a special case.
+
+The sign flag is a standard ISO C ``long'' which gives it the range $2^{-31} \le e < 2^{31}$ which is considerably large.  
+
+Technically, LibTomFloat does not implement IEEE standard floating point types.  The exponent is not normalized and the sign flag does not 
+count as a bit in the radix.  There is also no ``implied'' bit in this system.  The mantissa explicitly dictates the digits.
+
+\chapter{Getting Started with LibTomFloat}
+\section{Building Programs}
+In order to use libTomFloat you must include ``tomfloat.h'' and link against the appropriate library file (typically 
+libtomfloat.a).  There is no library initialization required and the entire library is thread safe.
+
+\section{Return Codes}
+There are three possible return codes a function may return.
+
+\index{MP\_OKAY}\index{MP\_YES}\index{MP\_NO}\index{MP\_VAL}\index{MP\_MEM}
+\begin{figure}[here!]
+\begin{center}
+\begin{small}
+\begin{tabular}{|l|l|}
+\hline \textbf{Code} & \textbf{Meaning} \\
+\hline MP\_OKAY & The function succeeded. \\
+\hline MP\_VAL  & The function input was invalid. \\
+\hline MP\_MEM  & Heap memory exhausted. \\
+\hline &\\
+\hline MP\_YES  & Response is yes. \\
+\hline MP\_NO   & Response is no. \\
+\hline
+\end{tabular}
+\end{small}
+\end{center}
+\caption{Return Codes}
+\end{figure}
+
+The last two codes listed are not actually ``return'ed'' by a function.  They are placed in an integer (the caller must
+provide the address of an integer it can store to) which the caller can access.  To convert one of the three return codes
+to a string use the following function.
+
+\index{mp\_error\_to\_string}
+\begin{alltt}
+char *mp_error_to_string(int code);
+\end{alltt}
+
+This will return a pointer to a string which describes the given error code.  It will not work for the return codes 
+MP\_YES and MP\_NO.  
+
+\section{Data Types}
+
+To better work with LibTomFloat it helps to know what makes up the primary data type within LibTomFloat.
+
+\begin{alltt}
+typedef struct \{
+     mp_int mantissa;
+     long   radix,
+            exp;
+\} mp_float;
+\end{alltt}
+
+The mp\_float data type is what all LibTomFloat functions will operate with and upon.  The members of the structre are as follows:
+
+\begin{enumerate}
+   \item The \textbf{mantissa} variable is a LibTomMath mp\_int that represents the digits of the float.  Since it's a mp\_int it can accomodate
+         any practical range of numbers.
+   \item The \textbf{radix} variable is the precision desired for the mp\_float in bits.  The higher the value the more precise (and slow) the 
+         calculations are.  This value must be larger than two and ideally shouldn't be lower than what a ``double'' provides (55-bits of mantissa).
+   \item The \textbf{exp} variable is the exponent associated with the number.  
+\end{enumerate}
+
+\section{Function Organization}
+
+Many of the functions operate as their LibTomMath counterparts.  That is the source operands are on the left and the destination is on the 
+right.  For instance:
+
+\begin{alltt}
+mpf_add(&a, &b, &c);       /* c = a + b */
+mpf_mul(&a, &a, &c);       /* c = a * a */
+mpf_div(&a, &b, &c);       /* c = a / b */
+\end{alltt}
+
+One major difference (and similar to LibTomPoly) is that the radix of the destination operation controls the radix of the internal computation and 
+the final result.  For instance, if $a$ and $b$ have a $24$--bit mantissa and $c$ has a $96$--bit mantissa then all three operations are performed
+with $96$--bits of precision.  
+
+This is non--issue for algorithms such as addition or multiplication but more important for the series calculations such as division, inversion,
+square roots, etc.
+
+All functions normalize the result before returning.  
+
+\section{Initialization}
+\subsection{Single Initializers}
+
+To initialize or clear a single mp\_float use the following two functions.
+
+\index{mpf\_init} \index{mpf\_clear}
+\begin{alltt}
+int  mpf_init(mp_float *a, long radix);
+void mpf_clear(mp_float *a);
+\end{alltt}
+
+mpf\_init will initialize $a$ with the given radix to the default value of zero.  mpf\_clear will free the memory used by the 
+mp\_float.
+
+\begin{alltt}
+int main(void)
+\{
+   mp_float a;
+   int err;
+
+   /* initialize a mp_float with a 96-bit mantissa */
+   if ((err = mpf_init(&a, 96)) != MP_OKAY) \{
+      // error handle
+   \}
+
+   /* we now have a 96-bit mp_float ready ... do work */
+
+   /* done */
+   mpf_clear(&a);
+
+   return EXIT_SUCCESS;
+\}
+\end{alltt}
+
+\subsection{Multiple Initializers}
+
+To initialize or clear multiple mp\_floats simultaneously use the following two functions.
+
+\index{mpf\_init\_multi} \index{mpf\_clear\_multi}
+\begin{alltt}
+int  mpf_init_multi(long radix, mp_float *a, ...);
+void mpf_clear_multi(mp_float *a, ...);
+\end{alltt}
+
+mpf\_init\_multi will initialize a \textbf{NULL} terminated list of mp\_floats with the same given radix.  mpf\_clear\_multi will free 
+up a \textbf{NULL} terminated list of mp\_floats.
+
+\begin{alltt}
+int main(void)
+\{
+   mp_float a, b;
+   int err;
+
+   /* initialize two mp_floats with a 96-bit mantissa */
+   if ((err = mpf_init_multi(96, &a, &b, NULL)) != MP_OKAY) \{
+      // error handle
+   \}
+
+   /* we now have two 96-bit mp_floats ready ... do work */
+
+   /* done */
+   mpf_clear_multi(&a, &b, NULL);
+
+   return EXIT_SUCCESS;
+\}
+\end{alltt}
+
+\subsection{Initialization of Copies}
+
+In order to initialize an mp\_float and make a copy of a source mp\_float the following function has been provided.
+
+\index{mpf\_init\_copy}
+\begin{alltt}
+int  mpf_init_copy(mp_float *a, mp_float *b);
+\end{alltt}
+
+This will initialize $b$ and make it a copy of $a$.  
+
+\begin{alltt}
+int main(void)
+\{
+   mp_float a, b;
+   int err;
+
+   /* initialize a mp_float with a 96-bit mantissa */
+   if ((err = mpf_init(&a, 96)) != MP_OKAY) \{
+      // error handle
+   \}
+
+   /* we now have a 96-bit mp_float ready ... do work */
+
+   /* now make our copy */
+   if ((err = mpf_init_copy(&a, &b)) != MP_OKAY) \{
+      // error handle
+   \}
+
+   /* now b is a copy of a */
+
+   /* done */
+   mpf_clear_multi(&a, &b, NULL);
+
+   return EXIT_SUCCESS;
+\}
+\end{alltt}
+
+\section{Data Movement}
+\subsection{Copying}
+In order to copy one mp\_float into another mp\_float the following function has been provided.
+
+\index{mpf\_copy}
+\begin{alltt}
+int  mpf_copy(mp_float *src, mp_float *dest);
+\end{alltt}
+This will copy the mp\_float from $src$ into $dest$.  Note that the final radix of $dest$ will be that of $src$.
+
+\begin{alltt}
+int main(void)
+\{
+   mp_float a, b;
+   int err;
+
+   /* initialize two mp_floats with a 96-bit mantissa */
+   if ((err = mpf_init_multi(96, &a, &b, NULL)) != MP_OKAY) \{
+      // error handle
+   \}
+
+   /* we now have two 96-bit mp_floats ready ... do work */
+
+   /* put a into b */
+   if ((err = mpf_copy(&a, &b)) != MP_OKAY) \{
+      // error handle
+   \}
+   
+   /* done */
+   mpf_clear_multi(&a, &b, NULL);
+
+   return EXIT_SUCCESS;
+\}
+\end{alltt}
+
+\subsection{Exchange}
+
+To exchange the contents of two mp\_float data types use this f00.
+
+\index{mpf\_exch}
+\begin{alltt}
+void mpf_exch(mp_float *a, mp_float *b);
+\end{alltt}
+
+This will swap the contents of $a$ and $b$.  
+
+\chapter{Basic Operations}
+\section{Normalization}
+
+\subsection{Simple Normalization}
+Normalization is not required by the user unless they fiddle with the mantissa on their own.  If that's the case you can
+use this function.
+\index{mpf\_normalize}
+\begin{alltt}
+int  mpf_normalize(mp_float *a);
+\end{alltt}
+This will fix up the mantissa of $a$ such that the leading bit is one (if the number is non--zero).  
+
+\subsection{Normalize to New Radix}
+In order to change the radix of a non--zero number you must call this function.
+
+\index{mpf\_normalize\_to}
+\begin{alltt}
+int  mpf_normalize_to(mp_float *a, long radix);
+\end{alltt}
+This will change the radix of $a$ then normalize it accordingly.
+
+\section{Constants}
+
+\subsection{Quick Constants}
+The following are helpers for various numbers.
+
+\index{mpf\_const\_0} \index{mpf\_const\_d} \index{mpf\_const\_ln\_d} \index{mpf\_const\_sqrt\_d}
+\begin{alltt}
+int  mpf_const_0(mp_float *a);
+int  mpf_const_d(mp_float *a, long d);
+int  mpf_const_ln_d(mp_float *a, long b);
+int  mpf_const_sqrt_d(mp_float *a, long b);
+\end{alltt}
+
+mpf\_const\_0 will set $a$ to a valid representation of zero.  mpf\_const\_d will set $a$ to a valid signed representation of 
+$d$.  mpf\_const\_ln\_d will set $a$ to the natural logarithm of $b$.  mpf\_const\_sqrt\_d will set $a$ to the square root of
+$b$.
+
+The next set of constants (fig. \ref{fig:const}) compute the standard constants as defined in ``math.h''.  
+\begin{figure}[here]
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline \textbf{Function Name} & \textbf{Value} \\
+mpf\_const\_e & $e$ \\
+mpf\_const\_l2e & log$_2(e)$ \\
+mpf\_const\_l10e & log$_{10}(e)$ \\
+mpf\_const\_le2  & ln$(2)$ \\
+mpf\_const\_pi  & $\pi$ \\
+mpf\_const\_pi2  & $\pi / 2$ \\
+mpf\_const\_pi4  & $\pi / 4$ \\
+mpf\_const\_1pi  & $1 / \pi$ \\
+mpf\_const\_2pi  & $2 / \pi$ \\
+mpf\_const\_2rpi  & $2 / \sqrt{\pi}$ \\
+mpf\_const\_r2  & ${\sqrt{2}}$ \\
+mpf\_const\_1r2  & $1 / {\sqrt{2}}$ \\
+\hline
+\end{tabular}
+\end{center}
+\caption{LibTomFloat Constants.}
+\label{fig:const}
+\end{figure}
+
+All of these functions accept a single input argument.  They calculate the constant at run--time using the precision specified in the input
+argument.  
+
+\begin{alltt}
+int main(void)
+\{
+   mp_float a;
+   int err;
+
+   /* initialize a mp_float with a 96-bit mantissa */
+   if ((err = mpf_init(&a, 96)) != MP_OKAY) \{
+      // error handle
+   \}
+
+   /* let's find out what the square root of 2 is (approximately ;-)) */
+   if ((err = mpf_const_r2(&a)) != MP_OKAY) \{
+      // error handle 
+   \}
+
+   /* now a has sqrt(2) to 96-bits of precision */
+
+   /* done */
+   mpf_clear(&a);
+
+   return EXIT_SUCCESS;
+\}
+\end{alltt}
+
+\section{Sign Manipulation}
+To manipulate the sign of a mp\_float use the following two functions.
+
+\index{mpf\_abs} \index{mpf\_neg}
+\begin{alltt}
+int  mpf_abs(mp_float *a, mp_float *b);
+int  mpf_neg(mp_float *a, mp_float *b);
+\end{alltt}
+
+mpf\_abs computes the absolute of $a$ and stores it in $b$.  mpf\_neg computes the negative of $a$ and stores it in $b$.  Note that the numbers
+are normalized to the radix of $b$ before being returned.  
+
+\begin{alltt}
+int main(void)
+\{
+   mp_float a;
+   int err;
+
+   /* initialize a mp_float with a 96-bit mantissa */
+   if ((err = mpf_init(&a, 96)) != MP_OKAY) \{
+      // error handle
+   \}
+
+   /* let's find out what the square root of 2 is (approximately ;-)) */
+   if ((err = mpf_const_r2(&a)) != MP_OKAY) \{
+      // error handle 
+   \}
+
+   /* now make it negative */
+   if ((err = mpf_neg(&a, &a)) != MP_OKAY) \{
+      // error handle 
+   \}
+   
+   /* done */
+   mpf_clear(&a);
+
+   return EXIT_SUCCESS;
+\}
+\end{alltt}
+
+\chapter{Basic Algebra}
+\section{Algebraic Operators}
+
+The following four functions provide for basic addition, subtraction, multiplication and division of mp\_float numbers.
+
+\index{mpf\_add} \index{mpf\_sub} \index{mpf\_mul} \index{mpf\_div} 
+\begin{alltt}
+int  mpf_add(mp_float *a, mp_float *b, mp_float *c);
+int  mpf_sub(mp_float *a, mp_float *b, mp_float *c);
+int  mpf_mul(mp_float *a, mp_float *b, mp_float *c);
+int  mpf_div(mp_float *a, mp_float *b, mp_float *c);
+\end{alltt}
+These functions perform their respective operations on $a$ and $b$ and store the result in $c$.  
+
+\subsection{Additional Interfaces}
+In order to make programming easier with the library the following four functions have been provided as well.
+
+\index{mpf\_add\_d} \index{mpf\_sub\_d} \index{mpf\_mul\_d} \index{mpf\_div\_d} 
+\begin{alltt}
+int  mpf_add_d(mp_float *a, long b, mp_float *c);
+int  mpf_sub_d(mp_float *a, long b, mp_float *c);
+int  mpf_mul_d(mp_float *a, long b, mp_float *c);
+int  mpf_div_d(mp_float *a, long b, mp_float *c);
+\end{alltt}
+These work like the previous four functions except the second argument is a ``long'' type.  This allow operations with 
+mixed mp\_float and integer types (specifically constants) to be performed relatively easy.  
+
+\textit{I will put an example of all op/op\_d functions here...}
+
+\subsection{Additional Operators}
+The next three functions round out the simple algebraic operators.
+
+\index{mpf\_mul\_2} \index{mpf\_div\_2} \index{mpf\_sqr}
+\begin{alltt}
+int  mpf_mul_2(mp_float *a, mp_float *b);
+int  mpf_div_2(mp_float *a, mp_float *b);
+int  mpf_sqr(mp_float *a, mp_float *b);
+\end{alltt}
+
+mpf\_mul\_2 and mpf\_div\_2 multiply (or divide) $a$ by two and store it in $b$.  mpf\_sqr squares $a$ and stores it in $b$.  mpf\_sqr is
+faster than using mpf\_mul for squaring mp\_floats.
+
+\section{Comparisons}
+To compare two mp\_floats the following function can be used.
+\index{mp\_cmp}
+\begin{alltt}
+int  mpf_cmp(mp_float *a,   mp_float *b);
+\end{alltt}
+This will compare $a$ to $b$ and return one of the LibTomMath comparison flags.  Simply put, if $a$ is larger than $b$ it returns 
+MP\_GT.  If $a$ is smaller than $b$ it returns MP\_LT, otherwise it returns MP\_EQ.  The comparison is signed.
+
+To quickly compare an mp\_float to a ``long'' the following is provided.
+
+\index{mpf\_cmp\_d}
+\begin{alltt}
+int  mpf_cmp_d(mp_float *a, long b, int *res);
+\end{alltt}
+
+Which compares $a$ to $b$ and stores the result in $res$.  This function can fail which is unlike the digit compare from LibTomMath.
+
+\chapter{Advanced Algebra}
+\section{Powers}
+\subsection{Exponential}
+The following function computes $exp(x)$ otherwise known as $e^x$.
+
+\index{mpf\_exp}
+\begin{alltt}
+int  mpf_exp(mp_float *a, mp_float *b);
+\end{alltt}
+
+This computes $e^a$ and stores it into $b$.  
+
+\subsection{Power Operator}
+The following function computes the generic $a^b$ operation.  
+
+\index{mpf\_pow}
+\begin{alltt}
+int  mpf_pow(mp_float *a, mp_float *b, mp_float *c);
+\end{alltt}
+This computes $a^b$ and stores the result in $c$.
+
+\subsection{Natural Logarithm}
+
+The following function computes the natural logarithm.
+\index{mpf\_ln}
+\begin{alltt}
+int  mpf_ln(mp_float *a, mp_float *b);
+\end{alltt}
+This computes $ln(a)$ and stores the result in $b$.
+
+\section{Inversion and Roots}
+
+\subsection{Inverse Square Root}
+The following function computes $1 / \sqrt{x}$.
+
+\index{mpf\_invsqrt}
+\begin{alltt}
+int  mpf_invsqrt(mp_float *a, mp_float *b);
+\end{alltt}
+
+This computes $1 / \sqrt{a}$ and stores the result in $b$.
+
+\subsection{Inverse}
+
+The following function computes $1 / x$.
+\index{mpf\_inv}
+\begin{alltt}
+int  mpf_inv(mp_float *a, mp_float *b);
+\end{alltt}
+This computes $1/a$ and stores the result in $b$.
+
+
+\subsection{Square Root}
+
+The following function computes $\sqrt{x}$.
+
+\index{mpf\_sqrt}
+\begin{alltt}
+int  mpf_sqrt(mp_float *a, mp_float *b);
+\end{alltt}
+
+This computes $\sqrt{a}$ and stores the result in $b$.
+
+\section{Trigonometry Functions}
+The following functions compute various trigonometric functions.  All inputs are assumed to be in radians.
+
+\index{mpf\_cos} \index{mpf\_sin} \index{mpf\_tan} \index{mpf\_acos} \index{mpf\_asin} \index{mpf\_atan} 
+\begin{alltt}
+int  mpf_cos(mp_float *a, mp_float *b);
+int  mpf_sin(mp_float *a, mp_float *b);
+int  mpf_tan(mp_float *a, mp_float *b);
+int  mpf_acos(mp_float *a, mp_float *b);
+int  mpf_asin(mp_float *a, mp_float *b);
+int  mpf_atan(mp_float *a, mp_float *b);
+\end{alltt}
+
+These all compute their respective trigonometric function on $a$ and store the result in $b$.  The ``a'' prefix stands for ``arc'' or more
+commonly known as inverse.  
+
+\input{float.ind}
+
+\end{document}

@@ -1,0 +1,11 @@
+LibTomFloat is a *VERY* new package and is not even fully written yet.  Quite a 
+bit of the functionality is present but will be changing in the near future to allow
+for optimizations (e.g. early-outs).
+
+Please don't use LibTomFloat just yet for any production or fielded system.  
+
+By all means if you wish to test and help find bugs in LibTomFloat give the package a try.
+
+I do not guarantee the numerical accuracy of this package as of yet.
+
+You've been warned.
