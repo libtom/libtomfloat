@@ -18,6 +18,20 @@ int  mpf_sub(mp_float *a, mp_float *b, mp_float *c)
    mp_float tmp;
    long diff;
 
+   if (mpf_iszero(a)) {
+      diff = c->radix;
+      if ((err = mpf_neg(b, c)) != MP_OKAY) {
+         return err;
+      }
+      return mpf_normalize_to(c, diff);
+   } else if (mpf_iszero(b)) {
+      diff = c->radix;
+      if ((err = mpf_copy(a, c)) != MP_OKAY) {
+         return err;
+      }
+      return mpf_normalize_to(c, diff);
+   }
+
    if (a->exp < b->exp) {
       /* tmp == a normalize to b's exp */
       if ((err = mpf_init_copy(a, &tmp)) != MP_OKAY) {
@@ -40,7 +54,7 @@ int  mpf_sub(mp_float *a, mp_float *b, mp_float *c)
       diff = a->exp - tmp.exp;
       tmp.exp = a->exp;
       if ((err = mp_div_2d(&(tmp.mantissa), diff, (&tmp.mantissa), NULL)) != MP_OKAY)   { goto __TMP; }
-      if ((err = mp_sub(&(a->mantissa), &(tmp.mantissa), &(c->mantissa))) != MP_OKAY)  { goto __TMP; }
+		if ((err = mp_sub(&(a->mantissa), &(tmp.mantissa), &(c->mantissa))) != MP_OKAY)  { goto __TMP; }
       c->exp = a->exp;
    }
 

@@ -6,7 +6,7 @@ default: libtomfloat.a
 
 CFLAGS += -Os -Wall -W -I./
 
-VERSION=0.01
+VERSION=0.02
 
 #default files to install
 LIBNAME=libtomfloat.a
@@ -24,7 +24,7 @@ DATAPATH=/usr/share/doc/libtomfloat/pdf
 OBJECTS = \
 mpf_init.o mpf_clear.o mpf_init_multi.o mpf_clear_multi.o mpf_init_copy.o \
 \
-mpf_copy.o mpf_exch.o \
+mpf_copy.o mpf_exch.o mpf_abs.o mpf_neg.o \
 \
 mpf_cmp.o mpf_cmp_d.o \
 \
@@ -70,7 +70,7 @@ install: libtomfloat.a
 
 clean:
 	rm -f $(OBJECTS) libtomfloat.a *~ demos/*.o demos/*~ ex1
-	rm -f float.aux float.dvi float.log float.idx float.lof float.out float.toc
+	rm -f float.aux float.dvi float.log float.idx float.lof float.out float.toc float.ilg float.ind float.pdf
 
 zipup: clean manual
 	cd .. ; rm -rf ltf* libtomfloat-$(VERSION) ; mkdir libtomfloat-$(VERSION) ; \

@@ -1,3 +1,17 @@
-May 5th, 2004 v0.01 -- wrote base of LTF
+June 21st, 2004
+v0.02 -- Added missing objects to the makefile [oops]
+      -- fixed up mpf_add and mpf_sub to be more reliable about the precision
+      -- added required limited ln function mpf_ln_l (domain 0 < x <= 2)
+         It's still incomplete as it converges slowly (and therefore yields incorrect results)
+      -- Added mpf_ln and mpf_atan
+      -- Added short-circuits to sin, cos, invsqrt, atan, ln and sqrt [huge speedup]
+      -- Optimized mpf_sqrt and mpf_invsqrt by using quick estimates.  Fixed 
+         circular dependency as well (mpf_sqrt requires mpf_invsqrt but not vice versa)
+      ++ Note: No further releases are planned for a while.  I encourage interested
+         parties to fork this code base and extend it!
+              
+May 5th, 2004 
+v0.01 -- wrote base of LTF
 
-Anytime       v0.00 -- no LTF existed.
+Anytime       
+v0.00 -- no LTF existed.

@@ -15,11 +15,11 @@
 /* using cos x == \sum_{n=0}^{\infty} ((-1)^n/(2n)!) * x^2n */
 int  mpf_cos(mp_float *a, mp_float *b)
 {
-   mp_float tmpovern, tmp, tmpx, res, sqr;
+   mp_float oldval, tmpovern, tmp, tmpx, res, sqr;
    int      oddeven, err, itts;
    long     n;
    /* initialize temps */
-   if ((err = mpf_init_multi(b->radix, &tmpx, &tmpovern, &tmp, &res, &sqr, NULL)) != MP_OKAY) {
+   if ((err = mpf_init_multi(b->radix, &oldval, &tmpx, &tmpovern, &tmp, &res, &sqr, NULL)) != MP_OKAY) {
       return err;
    }
 
@@ -40,6 +40,7 @@ int  mpf_cos(mp_float *a, mp_float *b)
    itts = mpf_iterations(b);
 
    while (itts-- > 0) {
+       if ((err = mpf_copy(&res, &oldval)) != MP_OKAY)                                  { goto __ERR; }
        /* compute 1/(2n)! from 1/(2(n-1))! by multiplying by (1/n)(1/(n+1)) */
        if ((err = mpf_const_d(&tmp, ++n)) != MP_OKAY)                                   { goto __ERR; }
        if ((err = mpf_inv(&tmp, &tmp)) != MP_OKAY)                                      { goto __ERR; }
@@ -62,8 +63,12 @@ int  mpf_cos(mp_float *a, mp_float *b)
        } else {
           if ((err = mpf_sub(&res, &tmp, &res)) != MP_OKAY)                             { goto __ERR; }
        }
+
+       if (mpf_cmp(&res, &oldval) == MP_EQ) {
+          break;
+       }
    }
    mpf_exch(&res, b);
-__ERR: mpf_clear_multi(&tmpx, &tmpovern, &tmp, &res, &sqr, NULL);
+__ERR: mpf_clear_multi(&oldval, &tmpx, &tmpovern, &tmp, &res, &sqr, NULL);
    return err;
 }

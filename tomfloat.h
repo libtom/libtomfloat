@@ -34,7 +34,7 @@ int  mpf_init_copy(mp_float *a, mp_float *b);
 int  mpf_copy(mp_float *src, mp_float *dest);
 void mpf_exch(mp_float *a, mp_float *b);
 
-/* maintainers */
+/* maintainers/misc */
 int  mpf_normalize(mp_float *a);
 int  mpf_normalize_to(mp_float *a, long radix);
 int  mpf_iterations(mp_float *a);

@@ -15,7 +15,7 @@
 /* using newtons method we have 1/sqrt(x) = Y_{n+1} = y_n * ((3 - xy^2_n)/2) */
 int  mpf_invsqrt(mp_float *a, mp_float *b)
 {
-   mp_float tmp1, tmp2, const_3;
+   mp_float oldval, tmp1, tmp2, const_3;
    int err, itts;
 
    /* ensure a is not zero or negative */
@@ -27,7 +27,7 @@ int  mpf_invsqrt(mp_float *a, mp_float *b)
    itts = mpf_iterations(b);
  
    /* init temps */
-   if ((err = mpf_init_multi(b->radix, &tmp1, &tmp2, &const_3, NULL)) != MP_OKAY) {
+   if ((err = mpf_init_multi(b->radix, &oldval, &tmp1, &tmp2, &const_3, NULL)) != MP_OKAY) {
       return err;
    }
 
@@ -36,13 +36,13 @@ int  mpf_invsqrt(mp_float *a, mp_float *b)
 
    /* tmp1 == reasonable guess at sqrt */
    if ((err = mpf_copy(a, &tmp1)) != MP_OKAY)                                     { goto __ERR; }
-
-   /* negate exponent and halve */
-   tmp1.radix = b->radix;
-   if ((err = mp_sqrt(&(tmp1.mantissa), &(tmp1.mantissa))) != MP_OKAY)            { goto __ERR; }
-   if ((err = mpf_normalize(&tmp1)) != MP_OKAY)                                   { goto __ERR; }
+   mp_rshd(&(tmp1.mantissa), tmp1.mantissa.used>>1);
+   if ((err = mpf_normalize_to(&tmp1, b->radix)) != MP_OKAY)                      { goto __ERR; }
 
    while (itts-- > 0) {
+       /* grap copy of tmp1 for early out */
+       if ((err = mpf_copy(&tmp1, &oldval)) != MP_OKAY)                           { goto __ERR; }
+
        /* first tmp2 = y^2 == tmp1^2 */
        if ((err = mpf_sqr(&tmp1, &tmp2)) != MP_OKAY)                              { goto __ERR; }
        /* multiply by x, tmp1 * a */
@@ -53,10 +53,15 @@ int  mpf_invsqrt(mp_float *a, mp_float *b)
        if ((err = mpf_div_2(&tmp2, &tmp2)) != MP_OKAY)                            { goto __ERR; }
        /* multiply by y_n and feedback */
        if ((err = mpf_mul(&tmp1, &tmp2, &tmp1)) != MP_OKAY)                       { goto __ERR; }
+
+       /* early out if stable */
+       if (mpf_cmp(&oldval, &tmp1) == MP_EQ) {
+          break;
+       }
    }
 
    mpf_exch(&tmp1, b);
-__ERR: mpf_clear_multi(&tmp1, &tmp2, &const_3, NULL);
+__ERR: mpf_clear_multi(&oldval, &tmp1, &tmp2, &const_3, NULL);
    return err;
 }
 

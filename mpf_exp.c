@@ -16,12 +16,12 @@
 /* compute b = e^a using e^x == \sum_{n=0}^{\infty} {1 \over n!}x^n */
 int  mpf_exp(mp_float *a, mp_float *b)
 {
-   mp_float  tmpx, tmpovern, tmp, res; 
+   mp_float  oldval, tmpx, tmpovern, tmp, res; 
    int       err, itts;
    long      n;
 
    /* initialize temps */
-   if ((err = mpf_init_multi(b->radix, &tmpx, &tmpovern, &tmp, &res, NULL)) != MP_OKAY) {
+   if ((err = mpf_init_multi(b->radix, &oldval, &tmpx, &tmpovern, &tmp, &res, NULL)) != MP_OKAY) {
       return err;
    }
 
@@ -36,8 +36,9 @@ int  mpf_exp(mp_float *a, mp_float *b)
    itts = mpf_iterations(b);
 
    while (itts-- > 0) {
+       if ((err = mpf_copy(&res, &oldval)) != MP_OKAY)                                  { goto __ERR; }
+
        /* compute 1/n! as 1/(n-1)! * 1/n */
-// hack: this won't be portable for n>127
        if ((err = mpf_const_d(&tmp, n++)) != MP_OKAY)                                   { goto __ERR; }
        if ((err = mpf_inv(&tmp, &tmp)) != MP_OKAY)                                      { goto __ERR; }
        if ((err = mpf_mul(&tmp, &tmpovern, &tmpovern)) != MP_OKAY)                      { goto __ERR; }
@@ -48,10 +49,14 @@ int  mpf_exp(mp_float *a, mp_float *b)
        /* multiply and sum them */
        if ((err = mpf_mul(&tmpovern, &tmpx, &tmp)) != MP_OKAY)                          { goto __ERR; }
        if ((err = mpf_add(&tmp, &res, &res)) != MP_OKAY)                                { goto __ERR; }
+
+       if (mpf_cmp(&oldval, &res) == MP_EQ) {
+          break;
+       }
    }
 
    mpf_exch(&res, b);
-__ERR: mpf_clear_multi(&tmpx, &tmpovern, &tmp, &res, NULL);
+__ERR: mpf_clear_multi(&oldval, &tmpx, &tmpovern, &tmp, &res, NULL);
    return err;
 }
 

@@ -18,6 +18,20 @@ int  mpf_add(mp_float *a, mp_float *b, mp_float *c)
    mp_float tmp, *other;
    long diff;
 
+   if (mpf_iszero(a)) {
+      diff = c->radix;
+      if ((err = mpf_copy(b, c)) != MP_OKAY) {
+         return err;
+      }
+      return mpf_normalize_to(c, diff);
+   } else if (mpf_iszero(b)) {
+      diff = c->radix;
+      if ((err = mpf_copy(a, c)) != MP_OKAY) {
+         return err;
+      }
+      return mpf_normalize_to(c, diff);
+   }
+
    if (a->exp < b->exp) {
       /* tmp == a normalize to b's exp */
       if ((err = mpf_init_copy(a, &tmp)) != MP_OKAY) {

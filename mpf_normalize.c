@@ -14,7 +14,9 @@
 
 int  mpf_normalize(mp_float *a)
 {
-   long cb, diff;
+   long     cb, diff;
+   int      err;
+   mp_digit c;
 
    /* sanity */
    if (a->radix < 2) {
@@ -25,7 +27,18 @@ int  mpf_normalize(mp_float *a)
    if (cb > a->radix) {
       diff    = cb - a->radix;
       a->exp += diff;
-      return mp_div_2d(&(a->mantissa), diff, &(a->mantissa), NULL);
+
+      /* round it, add 1 after shift if diff-1'th bit is 1 */
+      c = a->mantissa.dp[diff/DIGIT_BIT] & (1U<<(diff%DIGIT_BIT));
+      if ((err = mp_div_2d(&(a->mantissa), diff, &(a->mantissa), NULL)) != MP_OKAY) {
+         return err;
+      }
+
+      if (c != 0) {
+         return mp_add_d(&(a->mantissa), 1, &(a->mantissa));
+      } else {
+         return MP_OKAY;
+      }
    } else if (cb < a->radix) {
       if (mp_iszero(&(a->mantissa)) == MP_YES) {
          return mpf_const_0(a);

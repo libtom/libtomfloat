@@ -15,6 +15,20 @@
 int  mpf_const_ln_d(mp_float *a, long b)
 {
    int err;
+
+   /* test input */
+   if (b < 0) {
+      return MP_VAL;
+   }
+
+   if (b == 0) {
+      return mpf_const_d(a, 1);
+   }
+
+   if (b == 1) {
+      return mpf_const_d(a, 0);
+   }
+
    if ((err = mpf_const_d(a, b)) != MP_OKAY) {
       return err;
    }
