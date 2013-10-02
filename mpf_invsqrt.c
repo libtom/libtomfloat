@@ -17,6 +17,7 @@ int  mpf_invsqrt(mp_float *a, mp_float *b)
 {
    mp_float oldval, tmp1, tmp2, const_3;
    int err, itts;
+   long expo, nbits;
 
    /* ensure a is not zero or negative */
    if ((mp_iszero(&(a->mantissa)) == MP_YES) || (a->mantissa.sign == MP_NEG)) {
@@ -36,8 +37,19 @@ int  mpf_invsqrt(mp_float *a, mp_float *b)
 
    /* tmp1 == reasonable guess at sqrt */
    if ((err = mpf_copy(a, &tmp1)) != MP_OKAY)                                     { goto __ERR; }
-   mp_rshd(&(tmp1.mantissa), tmp1.mantissa.used>>1);
-   if ((err = mpf_normalize_to(&tmp1, b->radix)) != MP_OKAY)                      { goto __ERR; }
+   expo = tmp1.exp;
+   if (expo < -tmp1.radix) {
+      nbits = -tmp1.radix - expo;
+      tmp1.exp = (expo + ( nbits + (nbits/2) ) );
+   }
+   else if (expo > -tmp1.radix) {
+      nbits = expo - -tmp1.radix ;
+      tmp1.exp = (expo - ( nbits + (nbits/2) ) );
+   }
+   else {
+      /* do nothing, near enough? */
+      tmp1.exp = expo;
+   }
 
    while (itts-- > 0) {
        /* grap copy of tmp1 for early out */
