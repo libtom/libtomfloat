@@ -85,6 +85,7 @@ int  mpf_cmp_d(mp_float *a, long b, int *res);
 /* Algebra */
 int  mpf_exp(mp_float *a, mp_float *b);                /* b = e^a       */
 int  mpf_pow(mp_float *a, mp_float *b, mp_float *c);   /* c = a^b       */
+int  mpf_pow_d(mp_float *a, long e, mp_float *c);   /* c = a^b       */
 int  mpf_ln(mp_float *a, mp_float *b);                 /* b = ln a      */
 int  mpf_invsqrt(mp_float *a, mp_float *b);            /* b = 1/sqrt(a) */
 int  mpf_inv(mp_float *a, mp_float *b);                /* b = 1/a       */
