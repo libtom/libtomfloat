@@ -5,7 +5,7 @@
 int mpf_get_double(double d, mp_float * a)
 {
 
-    int err, sign;
+    int err, sign, e;
     mp_int tmp;
 
     sign = (d < 0) ? MP_NEG : MP_ZPOS;
@@ -35,17 +35,20 @@ int mpf_get_double(double d, mp_float * a)
     if ((err = mp_init(&tmp)) != MP_OKAY) {
 	return err;
     }
-    // multiply by ten to the power of the decimal precision of the double
-    d *= pow(10.0, DBL_DIG);
+    // part the fraction from the exponent
+    d = frexp(d,&e);
+    // multiply by 2^m whith m the number of bits in the mantissa including the
+    // mutual bit
+    d *= pow(2.0, DBL_MANT_DIG);
     d = round(d);
     // convert the double to a mp_int (rounding mode 0 = to nearest)-unexpensive
     if ((err = mp_set_double(&tmp, d, 0) ) != MP_OKAY) {
 	return err;
     }
     // convert the mp_int to a mp_float-cheap
-    if ((err =  mpf_from_mp_int(&tmp, a)) != MP_OKAY) {
-	return err;
-    }
+    if ((err =  mpf_from_mp_int(&tmp, a)) != MP_OKAY) {	return err;    }
+    //  correct exponent-costs next to nothing
+    a->exp -= DBL_MANT_DIG - e;
     mp_clear(&tmp);
     // don't forget the sign which seems to happen quite often
     a->mantissa.sign = sign;
