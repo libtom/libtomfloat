@@ -2,6 +2,7 @@
 
 int mpf_ldexp(mp_float * a, long exp, mp_float * b)
 {
+    int err;
     if (mpf_isinf(a) || mpf_isnan(a) || mpf_iszero(a)) {
 	if ((err = mpf_copy(a, b)) != MP_OKAY) {
 	    return err;
