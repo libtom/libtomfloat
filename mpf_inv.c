@@ -12,28 +12,108 @@
  */
 #include <tomfloat.h>
 
-/* compute 1/x by (1/sqrt(x))^2 */
-int  mpf_inv(mp_float *a, mp_float *b)
+#include <tommath.h>
+
+/* compute 1/x */
+int mpf_inv(mp_float * a, mp_float * b)
 {
-   int err, sign;
+    int err, sign;
+    double d;
+    long expnt, oldeps, nloops, maxrounds;
+    mp_float frac, one, x0, xn, A, hn;
 
-   /* get sign of input */
-   sign = a->mantissa.sign;
+    /* get sign of input */
+    sign = a->mantissa.sign;
 
-   /* force to positive */
-   a->mantissa.sign = MP_ZPOS;
+    /* force to positive */
+    a->mantissa.sign = MP_ZPOS;
 
-   /* compute 1/sqrt(a) */
-   if ((err = mpf_invsqrt(a, b)) != MP_OKAY) {
-      return err;
-   }
+    oldeps = a->radix;
 
-   /* square 1/sqrt(a) to get 1/a */
-   err = mpf_sqr(b, b);
+    if ((err = mpf_init(&frac, a->radix)) != MP_OKAY) {
+	return err;
+    }
+    if ((err = mpf_frexp(a, &frac, &expnt)) != MP_OKAY) {
+	return err;
+    }
+    if ((err = mpf_set_double(&frac, &d)) != MP_OKAY) {
+	return err;
+    }
+    d = 1.0 / d;
+    if ((err = mpf_get_double(d, &frac)) != MP_OKAY) {
+	return err;
+    }
+    // TODO: checks & balances
+    expnt = -expnt + 1;
+    if ((err = mpf_ldexp(&frac, expnt, &frac)) != MP_OKAY) {
+	return err;
+    }
+    // TODO calculate guard digits more exactly and do it loop-wise
+    if ((err = mpf_normalize_to(&frac, frac.radix + MP_DIGIT_BIT)) != MP_OKAY) {
+	return err;
+    }
+    if ((err = mpf_init_copy(&frac, &xn)) != MP_OKAY) {
+	return err;
+    }
+    if ((err = mpf_init(&x0, frac.radix)) != MP_OKAY) {
+	return err;
+    }
+    if ((err = mpf_init(&one, frac.radix)) != MP_OKAY) {
+	return err;
+    }
+    if ((err = mpf_const_d(&one, 1L)) != MP_OKAY) {
+	return err;
+    }
+    if ((err = mpf_init(&hn, frac.radix)) != MP_OKAY) {
+	return err;
+    }
+    if ((err = mpf_init_copy(a, &A)) != MP_OKAY) {
+	return err;
+    }
+    if ((err = mpf_normalize_to(&A, frac.radix)) != MP_OKAY) {
+	return err;
+    }
+    maxrounds = A.radix;
+    nloops = 0L;
+    do {
+	if ((err = mpf_copy(&xn, &x0)) != MP_OKAY) {
+	    return err;
+	}
+	// hn = 1 - (A * xn);
+	if ((err = mpf_mul(&A, &xn, &hn)) != MP_OKAY) {
+	    return err;
+	}
+	if ((err = mpf_sub(&one, &hn, &hn)) != MP_OKAY) {
+	    return err;
+	}
+	// TODO: check against EPS instead
+	if (mpf_iszero(&hn)) {
+	    break;
+	}
+	// xn = xn + (xn * hn);
+	if ((err = mpf_mul(&xn, &hn, &hn)) != MP_OKAY) {
+	    return err;
+	}
+	if ((err = mpf_add(&xn, &hn, &xn)) != MP_OKAY) {
+	    return err;
+	}
+	nloops++;
+	if (nloops >= maxrounds) {
+	    // it might be a bug elsewhere, please report
+	    fprintf(stderr, "mpf_inv did not converge in %ld rounds", nloops);
+	    return MP_RANGE;
+	}
+    } while (mpf_cmp(&x0, &xn) != MP_EQ);
+    if ((err = mpf_normalize_to(&xn, oldeps)) != MP_OKAY) {
+	return err;
+    }
+    if ((err = mpf_copy(&xn, b)) != MP_OKAY) {
+	return err;
+    }
 
-   /* now restore the sign */
-   b->mantissa.sign = a->mantissa.sign = sign;
+    /* now restore the sign */
+    b->mantissa.sign = sign;
 
-   return err;
+    return err;
 }
 
