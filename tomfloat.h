@@ -27,6 +27,8 @@ typedef struct {
 
 /* Global radix value */
 extern long mpf_global_radix;
+/* Some cutoffs */
+extern int MPF_LOG_AGM_CUTOFF;
 /* Handling of the precision set above */
 long mpf_getprecision();
 long mpf_getdecimalprecision();
@@ -116,7 +118,7 @@ a->exp == ~0L\
 
 #define mpf_isdouble(a) (-(1021 + a->radix) <= a->exp && a->exp <= (1024 - a->radix))
 
-#define mpf_isfraction(a) (mof_iszero(a) || (a->exp <= -a->radix))
+#define mpf_isfraction(a) (mpf_iszero(a) || (a->exp <= -a->radix))
 
 /* Algebra */
 int  mpf_exp(mp_float *a, mp_float *b);                /* b = e^a       */
@@ -151,5 +153,12 @@ int mpf_set_double(mp_float * a, double *d);
 
 int mpf_frexp(mp_float * a, mp_float * b, long *exp);
 int mpf_ldexp(mp_float * a, long exp, mp_float * b);
+
+long mpf_digits(mp_float *a);
+
+/* temporary functions. if this is non-empty you have just entered
+   development area and are on your own risk from now on */
+int  mpf_inv_old(mp_float *a, mp_float *b);
+
 
 #endif

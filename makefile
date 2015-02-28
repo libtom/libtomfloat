@@ -48,7 +48,10 @@ mpf_from_mp_int.o\
 mpf_global_variables.o\
 mpf_getdecimalexponent.o  mpf_getdecimalprecision.o\
 mpf_set_double.o mpf_get_double.o\
-mpf_ldexp.o mpf_frexp.o
+mpf_ldexp.o mpf_frexp.o\
+mpf_inv_old.o\
+mpf_digits.o
+
 
 libtomfloat.a: $(OBJECTS)
 	$(AR) $(ARFLAGS) libtomfloat.a $(OBJECTS)
