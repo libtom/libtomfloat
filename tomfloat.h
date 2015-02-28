@@ -14,6 +14,9 @@
 #define TF_H_
 
 #include <tommath.h>
+// The math-functions gets used a lot, especially as initial values for the
+// Newton based algorithms
+#include <math.h>
 
 /* this is mp_float type */
 typedef struct {
@@ -21,6 +24,18 @@ typedef struct {
      long   radix,       /* how many bits for mantissa */
             exp;         /* current exponent, e.g. mantissa * 2^exp == number  */
 } mp_float;
+
+/* Global radix value */
+extern long mpf_global_radix;
+/* Handling of the precision set above */
+long mpf_getprecision();
+long mpf_getdecimalprecision();
+/* A threadsafe variant useing a mutex is available if MPF_USE_THREADS
+   is defined */
+void mpf_setprecision(long r);
+
+/* A helper for the radix conversion */
+long mpf_getdecimalexponent(long exp);
 
 /* initializers */
 int  mpf_init(mp_float *a, long radix);
@@ -38,8 +53,11 @@ void mpf_exch(mp_float *a, mp_float *b);
 int  mpf_normalize(mp_float *a);
 int  mpf_normalize_to(mp_float *a, long radix);
 int  mpf_iterations(mp_float *a);
+int  mpf_from_mp_int(mp_int * a, mp_float * b);
 
 /* constants */
+int  mpf_const_inf(mp_float *a, int sign);      /* set to +/- infinity */
+int  mpf_const_nan(mp_float *a);                /* set to NaN */
 int  mpf_const_0(mp_float *a);                  /* valid zero */
 int  mpf_const_d(mp_float *a, long d);          /* valid d */
 int  mpf_const_ln_d(mp_float *a, long b);       /* a = ln(b)     */
@@ -82,10 +100,28 @@ int  mpf_cmp(mp_float *a,   mp_float *b);
 int  mpf_cmp_d(mp_float *a, long b, int *res);
 #define mpf_iszero(a) mp_iszero(&((a)->mantissa))
 
+#define mpf_isnan(a) \
+( \
+a->mantissa.dp[a->mantissa.used - 1] ==  (mp_digit) (~0U) \
+&& \
+a->exp == ~0L\
+)
+
+#define mpf_isinf(a) \
+( \
+a->mantissa.dp[a->mantissa.used - 1] ==  (mp_digit) (0) \
+&& \
+a->exp == ~0L\
+)
+
+#define mpf_isdouble(a) (-(1021 + a->radix) <= exp && exp <= (1024 - a->radix))
+
+#define mpf_isfraction(a) (mof_iszero(a) || (a->exp <= -a->radix))
+
 /* Algebra */
 int  mpf_exp(mp_float *a, mp_float *b);                /* b = e^a       */
 int  mpf_pow(mp_float *a, mp_float *b, mp_float *c);   /* c = a^b       */
-int  mpf_pow_d(mp_float *a, long e, mp_float *c);   /* c = a^b       */
+int  mpf_pow_d(mp_float *a, long e, mp_float *c);      /* c = a^b       */
 int  mpf_ln(mp_float *a, mp_float *b);                 /* b = ln a      */
 int  mpf_invsqrt(mp_float *a, mp_float *b);            /* b = 1/sqrt(a) */
 int  mpf_inv(mp_float *a, mp_float *b);                /* b = 1/a       */
@@ -102,5 +138,15 @@ int  mpf_atan(mp_float *a, mp_float *b);               /* b = atan(a)   */
 /* ASCII <=> mp_float conversions */
 char *mpf_to_string(mp_float *a, mp_digit radix);
 int mpf_from_string(mp_float *a, const char *str, mp_digit radix);
+
+/* Bases 2, 10, and 16 from IEEE-754 formated strings to mp_float */
+int mpf_set_str(const char *str, mp_float * c);
+/* Conversion of mp_float to string, base 10 only (for now) */
+/* This function allocates memory for the string by itself, freeing it is
+   left to the caller */
+int mpf_get_str(mp_float * a, char **str, int base);
+
+int mpf_get_double(double d, mp_float * a);
+int mpf_set_double(mp_float * a, double *d);
 
 #endif
