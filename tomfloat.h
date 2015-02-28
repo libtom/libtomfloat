@@ -114,7 +114,7 @@ a->mantissa.dp[a->mantissa.used - 1] ==  (mp_digit) (0) \
 a->exp == ~0L\
 )
 
-#define mpf_isdouble(a) (-(1021 + a->radix) <= exp && exp <= (1024 - a->radix))
+#define mpf_isdouble(a) (-(1021 + a->radix) <= a->exp && a->exp <= (1024 - a->radix))
 
 #define mpf_isfraction(a) (mof_iszero(a) || (a->exp <= -a->radix))
 
