@@ -4,7 +4,7 @@
 
 default: libtomfloat.a
 
-CFLAGS += -Os -Wall -W -I./
+CFLAGS += -O2 -Wall -W -I./
 
 VERSION=0.02
 
@@ -40,14 +40,21 @@ mpf_add_d.o mpf_sub_d.o mpf_mul_d.o mpf_div_d.o \
 \
 mpf_invsqrt.o mpf_inv.o mpf_exp.o mpf_sqrt.o mpf_pow.o mpf_ln.o \
 \
-mpf_cos.o mpf_sin.o mpf_tan.o mpf_acos.o mpf_asin.o mpf_atan.o
+mpf_cos.o mpf_sin.o mpf_tan.o mpf_acos.o mpf_asin.o mpf_atan.o \
+mpf_pow_d.o\
+mpf_set_str.o mpf_get_str.o\
+mpf_const_nan.o mpf_const_inf.o\
+mpf_from_mp_int.o\
+mpf_global_variables.o\
+mpf_getdecimalexponent.o  mpf_getdecimalprecision.o\
+mpf_set_double.o mpf_get_double.o
 
 libtomfloat.a: $(OBJECTS)
 	$(AR) $(ARFLAGS) libtomfloat.a $(OBJECTS)
 	ranlib libtomfloat.a
 
 ex1: libtomfloat.a demos/ex1.o
-	$(CC) demos/ex1.o libtomfloat.a -ltommath -o ex1
+	$(CC) demos/ex1.o libtomfloat.a -ltommath -lm -o ex1
 
 #LTF user manual
 mandvi: float.tex
