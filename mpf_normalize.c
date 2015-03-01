@@ -37,7 +37,9 @@ int mpf_normalize(mp_float * a)
 	}
 
 	if (c != 0) {
-	    return mp_add_d(&(a->mantissa), 1, &(a->mantissa));
+	    if((err = mp_add_d(&(a->mantissa), 1, &(a->mantissa))) != MP_OKAY){
+	        return err;
+	    }
 	    // in case of a carry: shift one right; rinse and repeat
 	    if (mp_count_bits(&(a->mantissa)) > cb) {
 		if ((err =
@@ -47,6 +49,8 @@ int mpf_normalize(mp_float * a)
 		}
                 a->exp += 1;
                 goto loop;
+	    } else {
+	        return MP_OKAY;
 	    }
 	} else {
 	    return MP_OKAY;

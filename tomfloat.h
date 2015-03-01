@@ -156,6 +156,8 @@ int mpf_ldexp(mp_float * a, long exp, mp_float * b);
 
 long mpf_digits(mp_float *a);
 
+int mpf_nthroot(mp_float * a, long n, mp_float * b);
+
 /* temporary functions. if this is non-empty you have just entered
    development area and are on your own risk from now on */
 int  mpf_inv_old(mp_float *a, mp_float *b);

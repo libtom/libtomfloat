@@ -50,7 +50,8 @@ mpf_getdecimalexponent.o  mpf_getdecimalprecision.o\
 mpf_set_double.o mpf_get_double.o\
 mpf_ldexp.o mpf_frexp.o\
 mpf_inv_old.o\
-mpf_digits.o
+mpf_digits.o\
+mpf_nthroot.o
 
 
 libtomfloat.a: $(OBJECTS)
