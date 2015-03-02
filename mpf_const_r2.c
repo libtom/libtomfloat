@@ -11,10 +11,42 @@
  * Tom St Denis, tomstdenis@iahu.ca, http://float.libtomcrypt.org
  */
 #include <tomfloat.h>
+static mp_float mpf_r2;
+
+static long mpf_r2_precision;
 
 int  mpf_const_r2(mp_float *a)
 {
-   return mpf_const_sqrt_d(a, 2);
+    int err;
+
+    err = MP_OKAY;
+
+    if (mpf_r2_precision > 0 && a == NULL) {
+	mpf_clear(&mpf_r2);
+	mpf_r2_precision = 0;
+	return err;
+    }
+    if (mpf_r2_precision >= a->radix) {
+	if ((err = mpf_copy(&mpf_r2, a)) != MP_OKAY) {
+	    return err;
+	}
+	return mpf_normalize_to(a, a->radix);
+    } else {
+	if (mpf_r2_precision == 0) {
+	    if ((err = mpf_init(&mpf_r2, a->radix)) != MP_OKAY) {
+		return err;
+	    }
+	}
+	if ((err = mpf_const_d(&mpf_r2, 2)) != MP_OKAY) {
+	    return err;
+	}
+	if ((err = mpf_sqrt(&mpf_r2, &mpf_r2)) != MP_OKAY) {
+	    return err;
+	}
+	if ((err = mpf_copy(&mpf_r2, a)) != MP_OKAY) {
+	    return err;
+	}
+    }
+    return MP_OKAY;
 }
-                /* sqrt(2)     */
 

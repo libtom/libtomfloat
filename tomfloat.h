@@ -158,10 +158,12 @@ long mpf_digits(mp_float *a);
 
 int mpf_nthroot(mp_float * a, long n, mp_float * b);
 
+int mpf_agm(mp_float * a, mp_float * b, mp_float * c);
 
 /* temporary functions. if this is non-empty you have just entered
    development area and are on your own risk from now on */
 int  mpf_inv_old(mp_float *a, mp_float *b);
-int mpf_ln_new(mp_float * a, mp_float * b);
 int mpf_ln_agm(mp_float * a, mp_float * b);
+int mpf_exp_new(mp_float * a, mp_float * b);
+
 #endif

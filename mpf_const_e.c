@@ -12,12 +12,42 @@
  */
 #include <tomfloat.h>
 
-int  mpf_const_e(mp_float *a)
-{
-   int err;
+static mp_float mpf_e;
 
-   if ((err = mpf_const_d(a, 1)) != MP_OKAY) {
-      return err;
-   }
-   return mpf_exp(a, a);
+static long mpf_e_precision;
+
+int mpf_const_e(mp_float * a)
+{
+    int err;
+
+    err = MP_OKAY;
+
+    if (mpf_e_precision > 0 && a == NULL) {
+	mpf_clear(&mpf_e);
+	mpf_e_precision = 0;
+	return err;
+    }
+    if (mpf_e_precision >= a->radix) {
+	if ((err = mpf_copy(&mpf_e, a)) != MP_OKAY) {
+	    return err;
+	}
+	return mpf_normalize_to(a, a->radix);
+    } else {
+	if (mpf_e_precision == 0) {
+	    if ((err = mpf_init(&mpf_e, a->radix)) != MP_OKAY) {
+		return err;
+	    }
+	}
+	if ((err = mpf_const_d(&mpf_e, 1)) != MP_OKAY) {
+	    return err;
+	}
+	if ((err = mpf_exp(&mpf_e, &mpf_e)) != MP_OKAY) {
+	    return err;
+	}
+	if ((err = mpf_copy(&mpf_e, a)) != MP_OKAY) {
+	    return err;
+	}
+    }
+    return MP_OKAY;
 }
+
