@@ -52,7 +52,12 @@ mpf_ldexp.o mpf_frexp.o\
 mpf_inv_old.o\
 mpf_digits.o\
 mpf_nthroot.o\
-mpf_agm.o
+mpf_agm.o\
+mpf_sincos.o\
+mpf_floor.o mpf_ceil.o mpf_round.o
+
+#mpf_trig_arg_reduct.o
+
 
 
 

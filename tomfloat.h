@@ -160,6 +160,14 @@ int mpf_nthroot(mp_float * a, long n, mp_float * b);
 
 int mpf_agm(mp_float * a, mp_float * b, mp_float * c);
 
+
+int mpf_floor(mp_float *a, mp_float *b);
+int mpf_ceil(mp_float *a, mp_float *b);
+int mpf_round(mp_float *a, mp_float *b);
+
+
+
+
 /* temporary functions. if this is non-empty you have just entered
    development area and are on your own risk from now on */
 int  mpf_inv_old(mp_float *a, mp_float *b);
