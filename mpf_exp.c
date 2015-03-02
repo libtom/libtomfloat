@@ -36,7 +36,12 @@ int mpf_exp(mp_float * a, mp_float * b)
 	decexpo = mpf_getdecimalexponent(decexpo) - 1;
 	// TODO: evaluate the cutoffs and guard digits more exactly
 	// (Mmh... I'm curious how the compiler optimizes it)
-	if (decexpo > 2) {
+        eps = oldeps + 20;
+	m = 1 << 4;
+        if (decexpo > 1) {
+	    eps = oldeps + 30;
+	    m = 1 << 5;
+	} else	if (decexpo > 2) {
 	    eps = oldeps + 30;
 	    m = 1 << 5;
 	} else if (decexpo > 3) {
