@@ -24,7 +24,6 @@ int mpf_const_pi(mp_float * a)
     mp_float aa, b, d, d2, s, t, p, two, twoinv;
     long eps, oldeps, extra, k, loops, r;
 
-    oldeps = a->radix;
     err = MP_OKAY;
 
     // Sometimes memory is short, even today
@@ -33,6 +32,9 @@ int mpf_const_pi(mp_float * a)
 	mpf_pi_precision = 0;
 	return err;
     }
+
+    oldeps = a->radix;
+
     // five percent plus 3 bit angst-allowance
     // TODO: compute correct value
     extra = (oldeps / 100) * 5 + 3;
@@ -43,12 +45,14 @@ int mpf_const_pi(mp_float * a)
 	return mpf_normalize_to(a, oldeps);
     } else {
 	eps = oldeps + extra;
-	if (mpf_pi_precision == 0) {
+	if (mpf_pi_precision <= 0) {
 	    if ((err = mpf_init(&mpf_pi, eps)) != MP_OKAY) {
 		return err;
 	    }
 	}
-
+	if ((err = mpf_normalize_to(&mpf_pi, eps)) != MP_OKAY) {
+	    return err;
+	}
 	if ((err =
 	     mpf_init_multi(eps, &aa, &b, &d, &d2, &s, &t, &p, &two, &twoinv,
 			    NULL)) != MP_OKAY) {
