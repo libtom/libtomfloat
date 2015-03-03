@@ -54,7 +54,10 @@ mpf_digits.o\
 mpf_nthroot.o\
 mpf_agm.o\
 mpf_sincos.o\
-mpf_floor.o mpf_ceil.o mpf_round.o
+mpf_floor.o mpf_ceil.o mpf_round.o\
+mpf_trig_arg_reduct.o\
+mpf_sincos.o\
+mpf_const_eps.o
 
 #mpf_trig_arg_reduct.o
 
