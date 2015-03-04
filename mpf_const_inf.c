@@ -4,9 +4,13 @@ int mpf_const_inf(mp_float * a, int sign)
 {
     // set the most siginificant _limb_ to zero; easy to find,
     // easy to check
-    a->mantissa.dp[a->mantissa.used - 1] = (mp_digit) (0U);
+    if (a->mantissa.used == 0) {
+	mpf_const_d(a, 1);
+    }
+    a->mantissa.dp[a->mantissa.used] = (mp_digit) (0);
     // set exponent to all-ones
-    a->exp = ~0L;
-    a->mantissa.sign = sign;
+    a->exp = 1 << ((sizeof(long) * CHAR_BIT) - 1);
+    // keep sign as it is and do not normalize
     return MP_OKAY;
 }
+
