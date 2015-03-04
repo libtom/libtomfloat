@@ -2,6 +2,7 @@
 /* IEEE-754 sec. 3.4: +/- infinity */
 int mpf_const_inf(mp_float * a, int sign)
 {
+    int err;
     // set the most siginificant _limb_ to zero; easy to find,
     // easy to check
     if (a->mantissa.used == 0) {
