@@ -4,7 +4,7 @@
 
 default: libtomfloat.a
 
-CFLAGS += -O2 -Wall -W -I./
+CFLAGS += -O2 -g3 -Wall -W -I./
 
 VERSION=0.02
 
@@ -57,7 +57,8 @@ mpf_sincos.o\
 mpf_floor.o mpf_ceil.o mpf_round.o\
 mpf_trig_arg_reduct.o\
 mpf_sincos.o\
-mpf_const_eps.o
+mpf_const_eps.o\
+mpf_sin.o mpf_cos.o
 
 #mpf_trig_arg_reduct.o
 
