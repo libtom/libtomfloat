@@ -25,8 +25,13 @@ typedef struct {
             exp;         /* current exponent, e.g. mantissa * 2^exp == number  */
 } mp_float;
 
+
+
 /* Global radix value */
 extern long mpf_global_radix;
+/* Global error holder?  */
+extern int mpf_errno;
+
 /* Some cutoffs */
 extern int MPF_LOG_AGM_CUTOFF;
 /* Handling of the precision set above */
@@ -169,13 +174,15 @@ int mpf_trig_arg_reduct(mp_float *a, mp_float *b, int *k);
 
 int mpf_sincos(mp_float *a, mp_float *b, int cosine, int tan, int hyper);
 int mpf_const_eps(mp_float *a);
+int mpf_dump(mp_float * a);
+
 
 /* temporary functions. if this is non-empty you have just entered
    development area and are on your own risk from now on */
 int  mpf_inv_old(mp_float *a, mp_float *b);
 int mpf_ln_agm(mp_float * a, mp_float * b);
 int mpf_exp_new(mp_float * a, mp_float * b);
-int  mpf_sin_old(mp_float *a, mp_float *b);
+int  mpf_cos_old(mp_float *a, mp_float *b);
 
 
 #endif

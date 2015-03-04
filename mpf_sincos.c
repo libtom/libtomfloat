@@ -9,12 +9,7 @@
   This functions assumes that the argument is already reduced!
 
 */
-static int mpf_print(mp_float * a)
-{
-    mp_fput(&(a->mantissa),10,stdout);
-    printf(" * 2^%ld * 1.0\n", a->exp);
-    return MP_OKAY;
-}
+
 int mpf_sincos(mp_float * a, mp_float * b, int cosine, int tan, int hyper)
 {
     int err;

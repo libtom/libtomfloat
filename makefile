@@ -58,7 +58,7 @@ mpf_floor.o mpf_ceil.o mpf_round.o\
 mpf_trig_arg_reduct.o\
 mpf_sincos.o\
 mpf_const_eps.o\
-mpf_sin.o mpf_cos.o
+mpf_dump.o
 
 #mpf_trig_arg_reduct.o
 
