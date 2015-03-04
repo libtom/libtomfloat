@@ -11,6 +11,7 @@ int mpf_const_inf(mp_float * a, int sign)
     // set exponent to all-ones
     a->exp = 1 << ((sizeof(long) * CHAR_BIT) - 1);
     // keep sign as it is and do not normalize
+    a->mantissa.sign = sign;
     return MP_OKAY;
 }
 
