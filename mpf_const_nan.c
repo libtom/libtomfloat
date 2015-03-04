@@ -9,7 +9,9 @@ int mpf_const_nan(mp_float * a)
     // siginificant _limb_ to all-ones; easy to find, easy to check
     ilog2 = 0;
     if (a->mantissa.used == 0) {
-	mpf_const_d(a, 1);
+	if ((err = mpf_const_d(a, 1)) != MP_OKAY) {
+	    return err;
+	}
     }
     r = a->mantissa.dp[a->mantissa.used - 1];
     while (r >>= 1) {

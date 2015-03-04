@@ -5,7 +5,9 @@ int mpf_const_inf(mp_float * a, int sign)
     // set the most siginificant _limb_ to zero; easy to find,
     // easy to check
     if (a->mantissa.used == 0) {
-	mpf_const_d(a, 1);
+	if ((err = mpf_const_d(a, 1)) != MP_OKAY) {
+	    return err;
+	}
     }
     a->mantissa.dp[a->mantissa.used] = (mp_digit) (0);
     // set exponent to all-ones
