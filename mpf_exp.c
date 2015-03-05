@@ -35,32 +35,50 @@ int mpf_exp(mp_float * a, mp_float * b)
     if (decexpo > 0) {
 	decexpo = mpf_getdecimalexponent(decexpo) - 1;
 	// TODO: evaluate the cutoffs and guard digits more exactly
-	// (Mmh... I'm curious how the compiler optimizes it)
-        eps = oldeps + 20;
-	m = 1 << 4;
-        if (decexpo > 1) {
+	switch (decexpo) {
+	case 1:
+	    eps = oldeps + 20;
+	    m = 1 << 4;
+	    break;
+	case 2:
+	case 3:
 	    eps = oldeps + 30;
 	    m = 1 << 5;
-	} else	if (decexpo > 2) {
-	    eps = oldeps + 30;
-	    m = 1 << 5;
-	} else if (decexpo > 3) {
+	    break;
+	case 4:
 	    eps = oldeps + 60;
 	    m = 1 << 6;
-	} else if (decexpo > 4) {
+	    break;
+	case 5:
 	    eps = oldeps + 120;
 	    m = 1 << 7;
-	} else if (decexpo > 5) {
+	    break;
+	case 6:
 	    eps = oldeps + 240;
 	    m = 1 << 8;
-	} else if (decexpo > 6) {
+	    break;
+	case 7:
 	    eps = oldeps + 480;
 	    m = 1 << 9;
-	} else if (decexpo > 7) {
-	    // exp(1e7) ~ 6.592 e4342944
-	    // raise exponent overflow
+	    break;
+	case 8:
+	    eps = oldeps + 960;
+	    m = 1 << 10;
+	    break;
+/*
+        This gives ~3.33561e434294481 for 1e9 instead of ~8.003e434294481
+        There seems to be a still undetected flaw (over/underflow?), maybe
+        even somewhere else.
+
+	case 9:
+	    eps = oldeps + 2000;
+	    m = 1 << 11;
+	    break;
+*/
+	default:
 	    err = MP_RANGE;
 	    goto _ERR;
+	    break;
 	}
     } else {
 	m = 1 << 4;
@@ -68,8 +86,8 @@ int mpf_exp(mp_float * a, mp_float * b)
     }
 
     if ((err =
-	 mpf_init_multi(eps, &to, &t, &tx, &ret, &x0, &one, &two, &nt, &diff,
-			NULL)) != MP_OKAY) {
+	 mpf_init_multi(eps, &to, &t, &tx, &ret, &x0, &one, &two, &nt,
+			&diff, NULL)) != MP_OKAY) {
 	return err;
     }
 
