@@ -12,85 +12,198 @@
  */
 #include <tomfloat.h>
 
-/* y = y - (tan(y) - x)/(tan(y+0.1)-tan(x)) */
+/*
+    Argument reduction for atan(x) with |x| > 1
 
-int  mpf_atan(mp_float *a, mp_float *b)
+      atan(x) = Pi/2 - atan(1/x)       \; x > 0
+      atan(x) = -1 * (Pi/2 + atan(1/x) \; x < 0
+
+    Argument reduction for atan(x) with |x| < 1
+
+      atan(x) = atan( 1 ) + atan( (t-1)/(1+t) ) \; good for .5<x<1
+
+    Sign:
+
+      atan(x) = -atan(-x)
+
+    Fixed values:
+      atan(-1) = -Pi/4
+      atan(1) = Pi/4
+      atan(0) = 0
+      atan(Inf) = P/2;
+*/
+
+int mpf_atan(mp_float * a, mp_float * b)
 {
-   mp_float oldval, tmp, tmpx, res, sqr;
-   int      oddeven, ires, err, itts;
-   long     n;
+    mp_float one, x, pi, t1, t2, EPS;
+    long eps, oldeps;
+    int err, sign;
 
-   /* ensure -1 <= a <= 1 */
-   if ((err = mpf_cmp_d(a, -1, &ires)) != MP_OKAY) {
-      return err; 
-   }
-   if (ires == MP_LT) {
-      return MP_VAL;
-   }
+    if (mpf_isnan(a) || mpf_iszero(a)) {
+	return mpf_copy(a, b);
+    }
 
-   if ((err = mpf_cmp_d(a, 1, &ires)) != MP_OKAY) {
-      return err; 
-   }
-   if (ires == MP_GT) {
-      return MP_VAL;
-   }
+    err = MP_OKAY;
+    oldeps = a->radix;
+    // TODO: series evaluation has guard digits already
+    eps = oldeps + 3;
 
-   /* easy out if a == 0 */
-   if (mpf_iszero(a) == MP_YES) {
-      return mpf_const_d(b, 1);
-   }
-   
-   /* now a != 0 */
+    if ((err = mpf_init_multi(oldeps, &one, &x, NULL)) != MP_OKAY) {
+	return err;
+    }
+    if ((err = mpf_init_multi(eps, &pi, &t1, &t2, &EPS, NULL)) != MP_OKAY) {
+	mpf_clear_multi(&one, &x, NULL);
+	return err;
+    }
 
-   /* initialize temps */
-   if ((err = mpf_init_multi(b->radix, &oldval, &tmpx, &tmp, &res, &sqr, NULL)) != MP_OKAY) {
-      return err;
-   }
+    if ((err = mpf_const_d(&one, 1)) != MP_OKAY) {
+	goto _ERR;
+    }
+    if ((err = mpf_const_pi(&pi)) != MP_OKAY) {
+	goto _ERR;
+    }
 
-   /* initlialize temps */
-   /* res = 0 */
-   /* tmpx = 1/a */
-   if ((err = mpf_inv(a, &tmpx)) != MP_OKAY)                                            { goto __ERR; }
+    sign = a->mantissa.sign;
 
-   /* sqr = a^2 */
-   if ((err = mpf_sqr(a, &sqr)) != MP_OKAY)                                             { goto __ERR; }
+    if ((err = mpf_abs(a, &x)) != MP_OKAY) {
+	goto _ERR;
+    }
+    // we have to do this check in the precision of the input
+    // TODO: use EPS instead
+    if (mpf_cmp(a, &one) == MP_EQ) {
+	pi.exp -= 2;
+	if (sign == MP_NEG) {
+	    pi.mantissa.sign = MP_NEG;
+	}
+	if ((err = mpf_normalize_to(&pi, oldeps)) != MP_OKAY) {
+	    goto _ERR;
+	}
+	if ((err = mpf_copy(&pi, b)) != MP_OKAY) {
+	    goto _ERR;
+	}
+	goto _ERR;
+    }
 
-   /* this is the denom counter.  Goes up by two per pass */
-   n       = 1;
+    if ((err = mpf_normalize_to(&x, eps)) != MP_OKAY) {
+	goto _ERR;
+    }
+    if ((err = mpf_normalize_to(&one, eps)) != MP_OKAY) {
+	goto _ERR;
+    }
+    // a new one; would get hit by rounding errors otherwise
+    if ((err = mpf_const_d(&one, 1)) != MP_OKAY) {
+	goto _ERR;
+    }
+    // The smaller x is, the better the series works
+    // but foremost because of the instability near one.
+    if (mpf_cmp(&x, &one) == MP_LT) {
+	// atan(x) = atan( 1 ) + atan( (x-1)/(1+x) ) \; .5<x<1
 
-   /* we alternate between adding and subtracting */
-   oddeven = 0;
+	// Actually, the exact limit is sqrt(2)-1, the positive solution of
+	// x + (x - 1)/(1 + x)
+	// but .5 is easier to handle
+	one.exp -= 1;
+	if (mpf_cmp(&x, &one) != MP_LT) {
+	    // atan(1) = pi/4
+	    pi.exp -= 2;
+	    one.exp += 1;
+	    // x = (x - 1)/(1 + x)
+	    if ((err = mpf_sub(&x, &one, &t1)) != MP_OKAY) {
+		goto _ERR;
+	    }
+	    if ((err = mpf_add(&one, &x, &t2)) != MP_OKAY) {
+		goto _ERR;
+	    }
+	    if ((err = mpf_div(&t1, &t2, &x)) != MP_OKAY) {
+		goto _ERR;
+	    }
+	    // x will be negative, make it positive again
+	    x.mantissa.sign = MP_ZPOS;
+	    // evaluate series for x and subtract from pi/4
+	    if ((err = mpf_kernel_atan(&x, &x, 0)) != MP_OKAY) {
+		goto _ERR;
+	    }
+	    if ((err = mpf_sub(&pi, &x, &x)) != MP_OKAY) {
+		goto _ERR;
+	    }
+	    if (sign == MP_NEG) {
+		x.mantissa.sign = MP_NEG;
+	    }
+	    if ((err = mpf_normalize_to(&x, oldeps)) != MP_OKAY) {
+		goto _ERR;
+	    }
+	    if ((err = mpf_copy(&x, b)) != MP_OKAY) {
+		goto _ERR;
+	    }
+	    goto _ERR;
+	} else {
+	    if ((err = mpf_kernel_atan(&x, &x, 0)) != MP_OKAY) {
+		goto _ERR;
+	    }
+	    if (sign == MP_NEG) {
+		x.mantissa.sign = MP_NEG;
+	    }
+	    if ((err = mpf_normalize_to(&x, oldeps)) != MP_OKAY) {
+		goto _ERR;
+	    }
+	    if ((err = mpf_copy(&x, b)) != MP_OKAY) {
+		goto _ERR;
+	    }
+	    goto _ERR;
+	}
+    } else {
+	// atan(x) = Pi/2 - atan(1/x)       \; x > 0
+	// atan(x) = -1 * (Pi/2 + atan(1/x) \; x < 0
+	// the latter is not necessary because of
+	// atan(x) = -atan(-x)
 
-   /* get number of iterations */
-   itts = mpf_iterations(b);
+	// The inverse can get very small if x is very large, obviously.
+	// Cutoff depends on actual precision and absolute size of x, hence the
+	// check against EPS.
 
-   while (itts-- > 0) {
-       if ((err = mpf_copy(&res, &oldval)) != MP_OKAY)                                  { goto __ERR; }
+	if ((err = mpf_inv(&x, &x)) != MP_OKAY) {
+	    goto _ERR;
+	}
+	if ((err = mpf_const_eps(&EPS)) != MP_OKAY) {
+	    goto _ERR;
+	}
+	if (mpf_cmp(&x, &EPS) == MP_GT) {
+	    pi.exp -= 1;
+	    if ((err = mpf_kernel_atan(&x, &x, 0)) != MP_OKAY) {
+		goto _ERR;
+	    }
+	    if ((err = mpf_sub(&pi, &x, &x)) != MP_OKAY) {
+		goto _ERR;
+	    }
+	    if (sign == MP_NEG) {
+		x.mantissa.sign = MP_NEG;
+	    }
+	    if ((err = mpf_normalize_to(&x, oldeps)) != MP_OKAY) {
+		goto _ERR;
+	    }
+	    if ((err = mpf_copy(&x, b)) != MP_OKAY) {
+		goto _ERR;
+	    }
+	    goto _ERR;
+	} else {
+	    // \lim x\to\infty tan^{-1} x = \frac{\pi}{2}
+	    pi.exp -= 1;
+	    if (sign == MP_NEG) {
+		pi.mantissa.sign = MP_NEG;
+	    }
+	    if ((err = mpf_normalize_to(&pi, oldeps)) != MP_OKAY) {
+		goto _ERR;
+	    }
+	    if ((err = mpf_copy(&pi, b)) != MP_OKAY) {
+		goto _ERR;
+	    }
+	    goto _ERR;
+	}
+    }
 
-       /* compute 1/(2n-1) */
-       if ((err = mpf_const_d(&tmp, (2*n++ - 1))) != MP_OKAY)                           { goto __ERR; }
-       if ((err = mpf_inv(&tmp, &tmp)) != MP_OKAY)                                      { goto __ERR; }
 
-       /* now multiply a into tmpx twice */
-       if ((err = mpf_mul(&tmpx, &sqr, &tmpx)) != MP_OKAY)                              { goto __ERR; }
-
-       /* now multiply the two */
-       if ((err = mpf_mul(&tmpx, &tmp, &tmp)) != MP_OKAY)                               { goto __ERR; }
-
-       /* now depending on if this is even or odd we add/sub */
-       oddeven ^= 1;
-       if (oddeven  == 1) {
-          if ((err = mpf_add(&res, &tmp, &res)) != MP_OKAY)                             { goto __ERR; }
-       } else {
-          if ((err = mpf_sub(&res, &tmp, &res)) != MP_OKAY)                             { goto __ERR; }
-       }
-
-       if (mpf_cmp(&oldval, &res) == MP_EQ) {
-          break;
-       }
-   }
-   mpf_exch(&res, b);
-__ERR: mpf_clear_multi(&oldval, &tmpx, &tmp, &res, &sqr, NULL);
-   return err;
-
+  _ERR:
+    mpf_clear_multi(&one, &x, &pi, &t1, &t2, &EPS, NULL);
+    return err;
 }
+
