@@ -18,6 +18,7 @@ static long mpf_r2_precision;
 int  mpf_const_r2(mp_float *a)
 {
     int err;
+    long eps;
 
     err = MP_OKAY;
 
@@ -27,10 +28,11 @@ int  mpf_const_r2(mp_float *a)
 	return err;
     }
     if (mpf_r2_precision >= a->radix) {
+        eps = a->radix;
 	if ((err = mpf_copy(&mpf_r2, a)) != MP_OKAY) {
 	    return err;
 	}
-	return mpf_normalize_to(a, a->radix);
+	return mpf_normalize_to(a, eps);
     } else {
 	if (mpf_r2_precision == 0) {
 	    if ((err = mpf_init(&mpf_r2, a->radix)) != MP_OKAY) {

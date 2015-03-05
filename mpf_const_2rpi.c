@@ -20,6 +20,7 @@ int mpf_const_2rpi(mp_float * a)
 {
 
     int err;
+    long eps;
 
     err = MP_OKAY;
 
@@ -29,10 +30,11 @@ int mpf_const_2rpi(mp_float * a)
 	return err;
     }
     if (mpf_2rpi_precision >= a->radix) {
+        eps = a->radix;
 	if ((err = mpf_copy(&mpf_2rpi, a)) != MP_OKAY) {
 	    return err;
 	}
-	return mpf_normalize_to(a, a->radix);
+	return mpf_normalize_to(a, eps);
     } else {
 	if (mpf_2rpi_precision == 0) {
 	    if ((err = mpf_init(&mpf_2rpi, a->radix)) != MP_OKAY) {
