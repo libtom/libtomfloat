@@ -109,16 +109,16 @@ int  mpf_cmp_d(mp_float *a, long b, int *res);
 
 #define mpf_isnan(a) \
 ( \
-a->mantissa.dp[a->mantissa.used - 1] ==  (mp_digit) (~0U) \
+a->mantissa.dp[a->mantissa.used - 1] ==  (mp_digit) (1) \
 && \
-a->exp == ~0L\
+a->exp == 1 << ((sizeof(long) * CHAR_BIT) - 1)\
 )
 
 #define mpf_isinf(a) \
 ( \
 a->mantissa.dp[a->mantissa.used - 1] ==  (mp_digit) (0) \
 && \
-a->exp == ~0L\
+a->exp == 1 << ((sizeof(long) * CHAR_BIT) - 1)\
 )
 
 #define mpf_isdouble(a) (-(1021 + a->radix) <= a->exp && a->exp <= (1024 - a->radix))
@@ -175,6 +175,16 @@ int mpf_trig_arg_reduct(mp_float *a, mp_float *b, int *k);
 int mpf_sincos(mp_float *a, mp_float *b, int cosine, int tan, int hyper);
 int mpf_const_eps(mp_float *a);
 int mpf_dump(mp_float * a);
+
+int mpf_sinh(mp_float * a, mp_float * b);
+int mpf_cosh(mp_float * a, mp_float * b);
+int mpf_tanh(mp_float * a, mp_float * b);
+
+int mpf_kernel_atan(mp_float * a, mp_float * b, int hyper);
+int mpf_atan(mp_float * a, mp_float * b);
+int mpf_atan2(mp_float * a, mp_float * b, mp_float *c);
+int mpf_atanh(mp_float * a, mp_float * b);
+
 
 
 /* temporary functions. if this is non-empty you have just entered
