@@ -17,10 +17,10 @@
 /* compute 1/x */
 int mpf_inv(mp_float * a, mp_float * b)
 {
-    int err, sign;
+    int err, sign, sign2;
     double d;
-    long expnt, oldeps, nloops, maxrounds;
-    mp_float frac, one, x0, xn, A, hn;
+    long expnt, oldeps, eps, nloops, maxrounds;
+    mp_float frac, one, x0, xn, A, hn, EPS;
 
     /* get sign of input */
     sign = a->mantissa.sign;
@@ -29,73 +29,84 @@ int mpf_inv(mp_float * a, mp_float * b)
     a->mantissa.sign = MP_ZPOS;
 
     oldeps = a->radix;
+    eps = oldeps + MP_DIGIT_BIT;
 
-    if ((err = mpf_init(&frac, a->radix)) != MP_OKAY) {
+    err = MP_OKAY;
+
+    if(mpf_iszero(a)){
+      // raise DivisionByZero
+      return MP_VAL;
+    }
+
+
+    if ((err = mpf_init_multi(eps, &frac, &one, &x0, &xn, &A, &hn,NULL)) != MP_OKAY) {
 	return err;
     }
+
     if ((err = mpf_frexp(a, &frac, &expnt)) != MP_OKAY) {
-	return err;
+	goto _ERR;
     }
     if ((err = mpf_set_double(&frac, &d)) != MP_OKAY) {
-	return err;
+	goto _ERR;
     }
     d = 1.0 / d;
     if ((err = mpf_get_double(d, &frac)) != MP_OKAY) {
-	return err;
+	goto _ERR;
     }
-    // TODO: checks & balances
     expnt = -expnt + 1;
     if ((err = mpf_ldexp(&frac, expnt, &frac)) != MP_OKAY) {
-	return err;
+	goto _ERR;
     }
     // TODO calculate guard digits more exactly and do it loop-wise
-    if ((err = mpf_normalize_to(&frac, frac.radix + MP_DIGIT_BIT)) != MP_OKAY) {
-	return err;
+    if ((err = mpf_normalize_to(&frac, eps)) != MP_OKAY) {
+	goto _ERR;
     }
-    if ((err = mpf_init_copy(&frac, &xn)) != MP_OKAY) {
-	return err;
-    }
-    if ((err = mpf_init(&x0, frac.radix)) != MP_OKAY) {
-	return err;
-    }
-    if ((err = mpf_init(&one, frac.radix)) != MP_OKAY) {
-	return err;
+    if ((err = mpf_copy(&frac, &xn)) != MP_OKAY) {
+	goto _ERR;
     }
     if ((err = mpf_const_d(&one, 1L)) != MP_OKAY) {
-	return err;
+	goto _ERR;
     }
-    if ((err = mpf_init(&hn, frac.radix)) != MP_OKAY) {
-	return err;
+    if ((err = mpf_copy(a, &A)) != MP_OKAY) {
+	goto _ERR;
     }
-    if ((err = mpf_init_copy(a, &A)) != MP_OKAY) {
-	return err;
-    }
-    if ((err = mpf_normalize_to(&A, frac.radix)) != MP_OKAY) {
-	return err;
+    if ((err = mpf_normalize_to(&A, eps)) != MP_OKAY) {
+	goto _ERR;
     }
     maxrounds = A.radix;
     nloops = 0L;
+    if ((err = mpf_init(&EPS, oldeps)) != MP_OKAY) {
+	goto _ERR;
+    }
+    if ((err = mpf_const_eps(&EPS)) != MP_OKAY) {
+	goto _ERR;
+    }
     do {
 	if ((err = mpf_copy(&xn, &x0)) != MP_OKAY) {
-	    return err;
+	    goto _ERR;
 	}
 	// hn = 1 - (A * xn);
 	if ((err = mpf_mul(&A, &xn, &hn)) != MP_OKAY) {
-	    return err;
+	    goto _ERR;
 	}
 	if ((err = mpf_sub(&one, &hn, &hn)) != MP_OKAY) {
-	    return err;
+	    goto _ERR;
 	}
-	// TODO: check against EPS instead
-	if (mpf_iszero(&hn)) {
-	    break;
+	sign2 = hn.mantissa.sign;
+	hn.mantissa.sign = MP_ZPOS;
+	// It makes more sense to compare after that limit is reached
+	if (hn.exp <= EPS.exp) {
+	    if (mpf_cmp(&hn, &EPS) != MP_GT) {
+		break;
+	    }
 	}
+	hn.mantissa.sign = sign2;
 	// xn = xn + (xn * hn);
 	if ((err = mpf_mul(&xn, &hn, &hn)) != MP_OKAY) {
-	    return err;
+	    goto _ERR;
 	}
 	if ((err = mpf_add(&xn, &hn, &xn)) != MP_OKAY) {
-	    return err;
+	    goto _ERR;
 	}
 	nloops++;
 	if (nloops >= maxrounds) {
@@ -104,16 +115,17 @@ int mpf_inv(mp_float * a, mp_float * b)
 	    return MP_RANGE;
 	}
     } while (mpf_cmp(&x0, &xn) != MP_EQ);
-    if ((err = mpf_normalize_to(&xn, oldeps)) != MP_OKAY) {
-	return err;
-    }
-    if ((err = mpf_copy(&xn, b)) != MP_OKAY) {
-	return err;
-    }
 
+    if ((err = mpf_normalize_to(&xn, oldeps)) != MP_OKAY) {
+	goto _ERR;
+    }
+    mpf_exch(&xn, b);
     /* now restore the sign */
     b->mantissa.sign = sign;
 
+_ERR:
+
+    mpf_clear_multi(&frac, &one, &x0, &xn, &A, &hn, &EPS ,NULL);
     return err;
 }
 

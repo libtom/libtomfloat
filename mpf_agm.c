@@ -27,7 +27,7 @@ static int mpf_beta(mp_float * a, mp_float * b, mp_float * c)
 
 int mpf_agm(mp_float * a, mp_float * b, mp_float * c)
 {
-    mp_float A, aa, B, bb, diff;
+    mp_float A, aa, B, bb, diff, EPS;
     int err;
     long oldeps, eps;
 
@@ -35,7 +35,7 @@ int mpf_agm(mp_float * a, mp_float * b, mp_float * c)
     oldeps = a->radix;
     eps = oldeps + MP_DIGIT_BIT;
 
-    if ((err = mpf_init_multi(eps, &A, &aa, &B, &bb, &diff, NULL)) != MP_OKAY) {
+    if ((err = mpf_init_multi(eps, &A, &aa, &B, &bb, &diff, &EPS, NULL)) != MP_OKAY) {
 	return err;
     }
 
@@ -45,7 +45,12 @@ int mpf_agm(mp_float * a, mp_float * b, mp_float * c)
     if ((err = mpf_beta(a, b, &B)) != MP_OKAY) {
 	goto _ERR;
     }
-
+    if ((err = mpf_init(&EPS, oldeps)) != MP_OKAY) {
+	goto _ERR;
+    }
+    if ((err = mpf_const_eps(&EPS)) != MP_OKAY) {
+	goto _ERR;
+    }
     do {
 	if ((err = mpf_copy(&A, &aa)) != MP_OKAY) {
 	    goto _ERR;
@@ -65,8 +70,7 @@ int mpf_agm(mp_float * a, mp_float * b, mp_float * c)
 	if ((err = mpf_abs(&diff, &diff)) != MP_OKAY) {
 	    goto _ERR;
 	}
-	// TODO: compare against EPS
-    } while (!mpf_iszero(&diff));
+    } while (mpf_cmp(&diff,&EPS) == MP_GT);
 
     if ((err = mpf_normalize_to(&A, oldeps)) != MP_OKAY) {
 	goto _ERR;
@@ -75,7 +79,7 @@ int mpf_agm(mp_float * a, mp_float * b, mp_float * c)
 	goto _ERR;
     }
   _ERR:
-    mpf_clear_multi(&A, &aa, &B, &bb, &diff, NULL);
+    mpf_clear_multi(&A, &aa, &B, &bb, &diff, &EPS, NULL);
     return err;
 }
 
