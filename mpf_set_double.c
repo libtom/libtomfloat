@@ -24,19 +24,20 @@ int mpf_set_double(mp_float * a, double *d)
 	mpf_clear(&cp);
 	return err;
     }
+
 #if __STDC_VERSION__ >= 199901L
-    if (a->exp < -1022) {
+    if (cp.exp < -1022) {
 	*d = -INFINITY;
 	goto END;
-    } else if (a->exp > 1023) {
+    } else if (cp.exp > 1023) {
 	*d = INFINITY;
 	goto END;
     }
 #else
-    if (a->exp < -1022) {
+    if (cp.exp < -1022) {
 	*d = -HUGE_VAL;
 	goto END;
-    } else if (a->exp > 1023) {
+    } else if (cp.exp > 1023) {
 	*d = HUGE_VAL;
 	goto END;
     }

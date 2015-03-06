@@ -61,7 +61,9 @@ mpf_const_eps.o\
 mpf_dump.o\
 mpf_sinh.o mpf_cosh.o mpf_tanh.o\
 mpf_atanh.o mpf_kernel_atan.o\
-mpf_atan2.o
+mpf_atan2.o\
+mpf_asinh.o mpf_acosh.o
+
 
 
 #mpf_trig_arg_reduct.o

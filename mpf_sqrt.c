@@ -11,74 +11,131 @@
  * Tom St Denis, tomstdenis@iahu.ca, http://float.libtomcrypt.org
  */
 #include <tomfloat.h>
-
-/* compute using sqrt(x) = y_{n+1} = 0.5 * (y_{n} + x/y_{n}) */
+// same algorithm as inv_sqrt with the exceptioin of the last multiplication
+// TODO: evaluate why this %$§&%$ is necessary
 int mpf_sqrt(mp_float * a, mp_float * b)
 {
-    mp_float oldval, tmp, res, EPS, diff;
-    int err, itts;
+    int err, sign;
+    double d;
+    long expnt, oldeps, eps, nloops, maxrounds;
+    mp_float frac, one, x0, xn, A, hn, EPS;
 
-    /* make sure it's positive */
+    if (mpf_isnan(a) || mpf_isinf(a)) {
+	return mpf_copy(a, b);
+    }
+
     if (a->mantissa.sign == MP_NEG) {
 	return MP_VAL;
     }
+    if (mpf_iszero(a)) {
+	return mpf_const_0(b);
+    }
+    oldeps = a->radix;
+    eps = oldeps + MP_DIGIT_BIT;
+    err = MP_OKAY;
 
-    /* let's roll */
     if ((err =
-	 mpf_init_multi(b->radix, &oldval, &tmp, &res, &EPS, &diff,
+	 mpf_init_multi(eps, &frac, &one, &x0, &xn, &A, &hn,
 			NULL)) != MP_OKAY) {
 	return err;
     }
 
-    /* get copy of a and make reasonable guestimte towards the sqrt */
-    if ((err = mpf_copy(a, &res)) != MP_OKAY) {
-	goto __ERR;
-    }
-    mp_rshd(&(res.mantissa), res.mantissa.used >> 1);
-    res.exp = res.exp / 2;
-    if ((err = mpf_normalize_to(&res, b->radix)) != MP_OKAY) {
-	goto __ERR;
-    }
 
+    if ((err = mpf_frexp(a, &frac, &expnt)) != MP_OKAY) {
+	goto _ERR;
+    }
+    if ((err = mpf_set_double(&frac, &d)) != MP_OKAY) {
+	goto _ERR;
+    }
+    d = sqrt(d);
+    if ((err = mpf_get_double(d, &frac)) != MP_OKAY) {
+	goto _ERR;
+    }
+    // TODO: checks & balances
+    expnt >>= 1;
+    if ((err = mpf_ldexp(&frac, expnt, &frac)) != MP_OKAY) {
+	goto _ERR;
+    }
+    if ((err = mpf_inv(&frac, &frac)) != MP_OKAY) {
+	goto _ERR;
+    }
+    // normalize because frac has the radix of the input
+    if ((err = mpf_normalize_to(&frac, eps)) != MP_OKAY) {
+	goto _ERR;
+    }
+    if ((err = mpf_copy(&frac, &xn)) != MP_OKAY) {
+	goto _ERR;
+    }
+    if ((err = mpf_const_d(&one, 1L)) != MP_OKAY) {
+	goto _ERR;
+    }
+    if ((err = mpf_copy(a, &A)) != MP_OKAY) {
+	goto _ERR;
+    }
+    if ((err = mpf_normalize_to(&A, eps)) != MP_OKAY) {
+	goto _ERR;
+    }
+    maxrounds = A.radix;
+    nloops = 0L;
+    if ((err = mpf_init(&EPS, oldeps)) != MP_OKAY) {
+	goto _ERR;
+    }
     if ((err = mpf_const_eps(&EPS)) != MP_OKAY) {
-	goto __ERR;
+	goto _ERR;
     }
+    // TODO: work with increasing precision, starting at radix = 50, the
+    //       accuracy of the initial value and double each round
+    do {
+	if ((err = mpf_copy(&xn, &x0)) != MP_OKAY) {
+	    goto _ERR;
+	}
+	// hn = 1 - (A * xn^2);
+	if ((err = mpf_sqr(&xn, &hn)) != MP_OKAY) {
+	    goto _ERR;
+	}
+	if ((err = mpf_mul(&A, &hn, &hn)) != MP_OKAY) {
+	    goto _ERR;
+	}
+	if ((err = mpf_sub(&one, &hn, &hn)) != MP_OKAY) {
+	    goto _ERR;
+	}
+	sign = hn.mantissa.sign;
+	hn.mantissa.sign = MP_ZPOS;
+	// It makes more sense to compare after that limit is reached
+	if (hn.exp <= EPS.exp) {
+	    if (mpf_cmp(&hn, &EPS) != MP_GT) {
+		break;
+	    }
+	}
+	hn.mantissa.sign = sign;
+	// x(n+1) = xn + xn/2 * hn
+	xn.exp -= 1;
+	if ((err = mpf_mul(&xn, &hn, &hn)) != MP_OKAY) {
+	    goto _ERR;
+	}
+	xn.exp += 1;
+	if ((err = mpf_add(&xn, &hn, &xn)) != MP_OKAY) {
+	    goto _ERR;
+	}
+	nloops++;
+	if (nloops >= maxrounds) {
+	    // it might be a bug elsewhere, please report
+	    fprintf(stderr, "mpf_invsqrt did not converge in %ld rounds\n",
+		    nloops);
+	    return MP_RANGE;
+	}
 
-    /* number of iterations */
-    itts = mpf_iterations(b);
+    } while (mpf_cmp(&x0, &xn) != MP_EQ);
 
-    while (itts--) {
-	if ((err = mpf_copy(&oldval, &diff)) != MP_OKAY) {
-	    goto __ERR;
-	}
-	if ((err = mpf_copy(&res, &oldval)) != MP_OKAY) {
-	    goto __ERR;
-	}
-
-	/* compute x/res */
-	if ((err = mpf_div(a, &res, &tmp)) != MP_OKAY) {
-	    goto __ERR;
-	}
-	/* res + x/res */
-	if ((err = mpf_add(&res, &tmp, &res)) != MP_OKAY) {
-	    goto __ERR;
-	}
-	/* 0.5 * (res + x/res) */
-	if ((err = mpf_div_2(&res, &res)) != MP_OKAY) {
-	    goto __ERR;
-	}
-
-	if ((err = mpf_sub(&res, &oldval, &oldval)) != MP_OKAY) {
-	    goto __ERR;
-	}
-	oldval.mantissa.sign = MP_ZPOS;
-	if (mpf_cmp(&oldval, &diff) == MP_EQ || mpf_cmp(&oldval, &EPS) != MP_GT) {
-	    break;
-	}
+    if ((err = mpf_mul(&A, &xn, &xn)) != MP_OKAY) {
+	goto _ERR;
     }
-
-    mpf_exch(&res, b);
-  __ERR:mpf_clear_multi(&oldval, &tmp, &res, &EPS, &diff, NULL);
+    if ((err = mpf_normalize_to(&xn, oldeps)) != MP_OKAY) {
+	goto _ERR;
+    }
+    mpf_exch(&xn, b);
+  _ERR:
+    mpf_clear_multi(&frac, &one, &x0, &xn, &A, &hn, &EPS, NULL);
     return err;
 }
 

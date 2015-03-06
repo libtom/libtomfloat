@@ -67,6 +67,7 @@ int mpf_agm(mp_float * a, mp_float * b, mp_float * c)
 	}
 	// TODO: compare against EPS
     } while (!mpf_iszero(&diff));
+
     if ((err = mpf_normalize_to(&A, oldeps)) != MP_OKAY) {
 	goto _ERR;
     }

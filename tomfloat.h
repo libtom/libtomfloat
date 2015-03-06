@@ -184,6 +184,9 @@ int mpf_kernel_atan(mp_float * a, mp_float * b, int hyper);
 int mpf_atan(mp_float * a, mp_float * b);
 int mpf_atan2(mp_float * a, mp_float * b, mp_float *c);
 int mpf_atanh(mp_float * a, mp_float * b);
+int mpf_asinh(mp_float * a, mp_float * b);
+int mpf_acosh(mp_float * a, mp_float * b);
+
 
 
 
