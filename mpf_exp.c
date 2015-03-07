@@ -18,7 +18,7 @@ int mpf_exp(mp_float * a, mp_float * b)
 {
     long n, oldeps, eps, loops, decexpo;
     mp_float to, t, tx, ret, x0, one, two, nt, diff;
-    int err, sign, m, i;
+    int err, sign, m, i, k=0;
 
     sign = MP_ZPOS;
     err = MP_OKAY;
@@ -36,6 +36,7 @@ int mpf_exp(mp_float * a, mp_float * b)
 	decexpo = mpf_getdecimalexponent(decexpo) - 1;
 	// TODO: evaluate the cutoffs and guard digits more exactly
 	switch (decexpo) {
+        case 0:
 	case 1:
 	    eps = oldeps + 20;
 	    m = 1 << 4;
@@ -84,13 +85,11 @@ int mpf_exp(mp_float * a, mp_float * b)
 	m = 1 << 4;
 	eps = oldeps + 20;
     }
-
     if ((err =
 	 mpf_init_multi(eps, &to, &t, &tx, &ret, &x0, &one, &two, &nt,
-			&diff, NULL)) != MP_OKAY) {
+			&diff, NULL)) != MP_OKAY) { 
 	return err;
     }
-
     if ((err = mpf_copy(a, &nt)) != MP_OKAY) {
 	goto _ERR;
     }
@@ -192,7 +191,6 @@ int mpf_exp(mp_float * a, mp_float * b)
     if ((err = mpf_copy(&ret, b)) != MP_OKAY) {
 	goto _ERR;
     }
-
   _ERR:
     mpf_clear_multi(&to, &t, &tx, &ret, &x0, &one, &two, &nt, &diff, NULL);
     return err;
