@@ -257,7 +257,6 @@ int mpf_ln_agm(mp_float * a, mp_float * b)
     if ((err = mpf_agm(&one, &fourx, &x)) != MP_OKAY) {
 	goto _ERR;
     }
-
     // (pi/2)/(AGM(1,4/x))
     if ((err = mpf_const_pi2(&pi)) != MP_OKAY) {
 	goto _ERR;
@@ -288,7 +287,6 @@ int mpf_ln_agm(mp_float * a, mp_float * b)
 
   _ERR:
     mpf_clear_multi(&x, &pi, &minv, &one, &fourx, NULL);
-
     return err;
 }
 

@@ -188,6 +188,8 @@ int mpf_asinh(mp_float * a, mp_float * b);
 int mpf_acosh(mp_float * a, mp_float * b);
 
 
+int mpf_lambertw(mp_float *a, mp_float *b, int branch);
+
 
 
 /* temporary functions. if this is non-empty you have just entered

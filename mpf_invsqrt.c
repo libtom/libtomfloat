@@ -15,9 +15,8 @@
 int  mpf_invsqrt(mp_float *a, mp_float *b)
 {
     int err, sign;
-    double d;
-    long expnt, oldeps, eps, nloops, maxrounds;
-    mp_float frac, one, x0, xn, A, hn, EPS;
+    long oldeps, eps, nloops, maxrounds;
+    mp_float one, x0, xn, A, hn, EPS;
 
     if (mpf_isnan(a) || mpf_isinf(a)) {
 	return mpf_copy(a, b);
@@ -34,46 +33,31 @@ int  mpf_invsqrt(mp_float *a, mp_float *b)
     err = MP_OKAY;
 
     if ((err =
-	 mpf_init_multi(eps, &frac, &one, &x0, &xn, &A, &hn,
+	 mpf_init_multi(eps, &one, &x0, &xn, &A, &hn,
 			NULL)) != MP_OKAY) {
 	return err;
     }
 
 
-    if ((err = mpf_frexp(a, &frac, &expnt)) != MP_OKAY) {
-	goto _ERR;
-    }
-    if ((err = mpf_set_double(&frac, &d)) != MP_OKAY) {
-	goto _ERR;
-    }
-    d = sqrt(d);
-    if ((err = mpf_get_double(d, &frac)) != MP_OKAY) {
-	goto _ERR;
-    }
-    // TODO: checks & balances
-    expnt >>= 1;
-    if ((err = mpf_ldexp(&frac, expnt, &frac)) != MP_OKAY) {
-	goto _ERR;
-    }
-    if ((err = mpf_inv(&frac, &frac)) != MP_OKAY) {
-	goto _ERR;
-    }
-    // normalize because frac has the radix of the input
-    if ((err = mpf_normalize_to(&frac, eps)) != MP_OKAY) {
-	goto _ERR;
-    }
-    if ((err = mpf_copy(&frac, &xn)) != MP_OKAY) {
-	goto _ERR;
-    }
-    if ((err = mpf_const_d(&one, 1L)) != MP_OKAY) {
-	goto _ERR;
-    }
     if ((err = mpf_copy(a, &A)) != MP_OKAY) {
 	goto _ERR;
     }
     if ((err = mpf_normalize_to(&A, eps)) != MP_OKAY) {
 	goto _ERR;
     }
+
+    if ((err = mpf_copy(&A, &xn)) != MP_OKAY) {
+	goto _ERR;
+    }
+    xn.exp /= 2; 
+    if ((err = mpf_inv(&xn, &xn)) != MP_OKAY) {
+	goto _ERR;
+    }
+
+    if ((err = mpf_const_d(&one, 1L)) != MP_OKAY) {
+	goto _ERR;
+    }
+
     maxrounds = A.radix;
     nloops = 0L;
     if ((err = mpf_init(&EPS, oldeps)) != MP_OKAY) {
@@ -131,7 +115,7 @@ int  mpf_invsqrt(mp_float *a, mp_float *b)
     }
     mpf_exch(&xn, b);
   _ERR:
-    mpf_clear_multi(&frac, &one, &x0, &xn, &A, &hn, &EPS, NULL);
+    mpf_clear_multi(&one, &x0, &xn, &A, &hn, &EPS, NULL);
     return err;
 }
 

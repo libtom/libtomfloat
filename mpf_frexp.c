@@ -13,6 +13,7 @@ int mpf_frexp(mp_float * a, mp_float * b, long *exp)
     *exp = a->exp + a->radix;
     b->exp = -a->radix;
     b->radix = a->radix;
+
     if ((err = mp_copy(&a->mantissa, &b->mantissa)) != MP_OKAY) {
 	return err;
     }

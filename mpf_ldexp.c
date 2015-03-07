@@ -14,6 +14,7 @@ int mpf_ldexp(mp_float * a, long exp, mp_float * b)
     }
     b->exp = exp - a->radix;
     b->radix = a->radix;
+
     return MP_OKAY;
 }
 

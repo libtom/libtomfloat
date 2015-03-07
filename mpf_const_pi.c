@@ -147,10 +147,8 @@ int mpf_const_pi(mp_float * a)
 	    k++;
 	    if (k == loops) {
 		err = MP_VAL;
-#ifdef DEBUG
 		fprintf(stderr, "Pi by AGM did not converge in %ld rounds\n",
 			k);
-#endif
 		goto _ERR;
 	    }
 	} while (mpf_cmp(&aa, &b) != MP_EQ);
