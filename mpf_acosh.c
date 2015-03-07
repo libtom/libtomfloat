@@ -3,7 +3,7 @@
 int mpf_acosh(mp_float * a, mp_float * b)
 {
     int err, sign;
-    mp_float one, t, t2;
+    mp_float one, t;
 
     err = MP_OKAY;
     sign = MP_ZPOS;

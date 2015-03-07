@@ -18,7 +18,7 @@ int mpf_exp(mp_float * a, mp_float * b)
 {
     long n, oldeps, eps, loops, decexpo;
     mp_float to, t, tx, ret, x0, one, two, nt, diff;
-    int err, sign, m, i, k=0;
+    int err, sign, m, i;
 
     sign = MP_ZPOS;
     err = MP_OKAY;

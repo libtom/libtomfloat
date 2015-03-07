@@ -1,15 +1,5 @@
 #include <tomfloat.h>
 
-static int mpf_print(mp_float * a)
-{
-    int size, err;
-    // one for EOS and one for sign
-    mp_fput(&(a->mantissa),10,stdout);
-    printf(" * 2^%ld * 1.0\n", a->exp);
-
-    return MP_OKAY;
-}
-
 /* round to next integer (towards +infinity)*/
 int mpf_round(mp_float *a, mp_float *b){
     int err, cmp;
