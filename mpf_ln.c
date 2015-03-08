@@ -66,18 +66,20 @@ int mpf_ln(mp_float * a, mp_float * b)
 	return MP_OKAY;
     }
     mpf_clear(&one);
+    ar = 4096;
 
+    oldeps = a->radix;
+    // one limb extra precision
+    eps = oldeps + MP_DIGIT_BIT;
     // Log by the AGM is faster already at some very low cutoff. Somebody
     // (Borwein?) said it would be faster at about 16 decimal digits precision.
     // The original value of the cutoff is set at 4 * MP_DIGITS_BITS but your
     // version might have changed that (in mpf_global_variables.c)
+    // TODO: an excemption to this cutoff for _very_ small input
     if (a->radix >= MPF_LOG_AGM_CUTOFF) {
-	return mpf_ln_agm(a, b);
+        return mpf_ln_agm(a, b);
     }
     // TODO: make series an extra function (useful for e.g.: benchmarking)
-    oldeps = a->radix;
-    // one limb extra precision
-    eps = oldeps + MP_DIGIT_BIT;
     if ((err = mpf_init_copy(a, &x)) != MP_OKAY) {
 	return err;
     }
@@ -87,7 +89,6 @@ int mpf_ln(mp_float * a, mp_float * b)
     }
 
     // argument reduction
-    ar = 4096;
     if ((err =
 	 mpf_init_multi(eps, &argred, &frac, &xc, &ret, &exponent, &one, &t,
 			&diff, &x0, NULL)) != MP_OKAY) {
@@ -257,6 +258,7 @@ int mpf_ln_agm(mp_float * a, mp_float * b)
     if ((err = mpf_agm(&one, &fourx, &x)) != MP_OKAY) {
 	goto _ERR;
     }
+
     // (pi/2)/(AGM(1,4/x))
     if ((err = mpf_const_pi2(&pi)) != MP_OKAY) {
 	goto _ERR;

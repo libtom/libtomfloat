@@ -1,47 +1,22 @@
 #include <tomfloat.h>
-// for the log() in mp_digits()
-#include <math.h>
-// returns the number of digits of base "base" of an mp_int
-// this is inexact and should not get used outside of calculating memory
-// (e.g: both of the decimal numbers 9 and 10 need 4 bits)
-// TODO: put it in libtommath where it belongs
-static int mp_digits(mp_int * a, int base)
-{
-    double log210;
-    int bits = mp_count_bits(a);
-    switch (base) {
-    case 2:
-	log210 = 1.0;
-	break;
-    case 8:
-	log210 = 3.0;
-	break;
-    case 10:
-	log210 = 3.321928094887362347870319429489390175865;
-	break;
-    case 16:
-	log210 = 4.0;
-	break;
-    default:
-	log210 = log(bits) / log(2.0);
-	break;
-    }
-    return (int) (floor(bits / log210) + 1);
-}
+
+
 /* Convert a mp_float into a string. Scientific notation and base 10 only
   (for now) 
   The string gets allocated by the function, freeing is left to the caller.
+  This is not the fastest way to do it
 */
 int mpf_get_str(mp_float * a, char **str, int base)
 {
     mp_int ret, ten;
-    mp_float ret2, ten2, anew;
+    mp_float ret2, ten2, anew, log10,loga;
     int err, digits, tmpdigits;
     int decprec, decexpo;
     int sign;
     char *tmp, *s;
     size_t len, offset;
     long eps;
+    //double d;
     // rounding bit
     mp_digit c;
 
@@ -53,7 +28,7 @@ int mpf_get_str(mp_float * a, char **str, int base)
 	fprintf(stderr, "Base is (temporarily) restricted to 10\n");
 	return MP_VAL;
     }
-    decprec = mpf_getdecimalprecision();
+    decprec = mpf_getdecimalprecision(a->radix);
     // some guard digits
     eps = (a->radix) + MP_DIGIT_BIT;
 
@@ -73,6 +48,13 @@ int mpf_get_str(mp_float * a, char **str, int base)
 	mpf_clear(&anew);
 	return err;
     }
+    if ((err = mpf_init_multi(anew.radix,&log10,&loga, NULL)) != MP_OKAY) {
+	mp_clear(&ret);
+	mpf_clear(&anew);
+	return err;
+    }
+
+
     if (ret.sign == MP_NEG) {
 	sign = MP_NEG;
 	ret.sign = MP_ZPOS;
@@ -84,12 +66,25 @@ int mpf_get_str(mp_float * a, char **str, int base)
 
     // it must be an integer
     if (a->exp >= 0) {
+	// TODO: bases 2 and 16 can be done with shifting instead
 	if ((err = mp_mul_2d(&ret, (int) a->exp, &ret)) != MP_OKAY) {
 	    mp_clear(&ret);
 	    return err;
 	}
-	digits = mp_digits(&ret, base);
-	// TODO: bases 2 and 16 can be done with shifting instead
+
+        mp_radix_size(&ret,10,&digits);
+/*
+        mpf_const_ln_d(&log10, 10L);
+        mpf_ln(&anew,&loga);
+        mpf_div(&loga,&log10,&loga);
+        mpf_floor(&loga,&loga);
+        mpf_set_double(&loga, &d);
+	// exponent is always in base ten
+        digits = (int)(d);
+	decexpo = digits;
+*/
+	decexpo = digits - 2;
+
 	if ((err = mpf_init(&ret2, eps)) != MP_OKAY) {
 	    mp_clear(&ret);
 	    return err;
@@ -126,12 +121,13 @@ int mpf_get_str(mp_float * a, char **str, int base)
 	    mpf_clear(&anew);
 	    return err;
 	}
+
 	if (ret2.exp < 0) {
 	    c = ret2.mantissa.dp[abs(ret2.exp) /
 				 MP_DIGIT_BIT] & (1U << (abs(ret2.exp) %
 							 DIGIT_BIT));
 	    if ((err =
-		 mp_div_2d(&ret2.mantissa, abs(ret2.exp), &ret,
+		 mp_div_2d(&ret2.mantissa, abs(ret2.exp), &ret2.mantissa,
 			   NULL)) != MP_OKAY) {
 		mp_clear(&ret);
 		mpf_clear_multi(&ret2, &ten2, NULL);
@@ -139,29 +135,32 @@ int mpf_get_str(mp_float * a, char **str, int base)
 	    }
             // TODO: rounding may have added a bit
 	    if (c != 0) {
-		if ((err = mp_add_d(&ret, 1, &ret)) != MP_OKAY) {
+//printf("bits = %d\n",mp_count_bits(&ret));
+		if ((err = mp_add_d(&ret2.mantissa, 1, &ret2.mantissa)) != MP_OKAY) {
 		    mp_clear(&ret);
 		    mpf_clear_multi(&ret2, &ten2, NULL);
 		    return err;
 		}
+//printf("bits = %d\n",mp_count_bits(&ret));
 	    }
 	} else {
 	    if ((err =
-		 mp_mul_2d(&ret2.mantissa, abs(ret2.exp), &ret)) != MP_OKAY) {
+		 mp_mul_2d(&ret2.mantissa, abs(ret2.exp), &ret2.mantissa)) != MP_OKAY) {
 		mp_clear(&ret);
 		mpf_clear_multi(&ret2, &ten2, NULL);
 		return err;
 	    }
 	}
+        mp_exch(&ret2.mantissa,&ret);
 	mpf_clear_multi(&ret2, &ten2, NULL);
 	if (mp_iszero(&ret)) {
 	    mp_clear(&ret);
 	    goto print_zero;
 	}
-        // TODO: the code below is used twice with very small chances only
+        // TODO: the code below is used twice with very small chances
 	// We have to allocate memory for the resulting string
 	// but do not know how much. Finding it out involves a
-	// lot of guesswork
+	// lot of guesswork, hence the large amount of angst-allowance
 	tmpdigits = mp_digits(&ret, base) + 5;
 	// digits in ret + sign + expo.-mark + expo + angst-allowance = 50
 	*str = malloc((tmpdigits + 50) * sizeof(char));
@@ -179,8 +178,7 @@ int mpf_get_str(mp_float * a, char **str, int base)
 	    free(str);
 	    return err;
 	}
-	// exponent is always in base ten
-	decexpo = digits - 1;
+
 	// assuming 8 bit char < 4 decimal digits (plus sign, EOS and a.-a.)
 	tmp = malloc((sizeof(int) * 4 + 3) * sizeof(char));
 	if (tmp == NULL) {
@@ -251,7 +249,8 @@ int mpf_get_str(mp_float * a, char **str, int base)
 
     } else {
 	// it is not necessarily an integer
-	decexpo = mpf_getdecimalexponent((a->exp));
+	decexpo = mpf_getdecimalexponent(a->exp);
+
 	if ((err = mpf_init(&ret2, eps)) != MP_OKAY) {
 	    mp_clear(&ret);
 	    return err;

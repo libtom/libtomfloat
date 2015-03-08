@@ -60,7 +60,8 @@ static char *strcasechar(const char *s, int c, size_t * len)
     *len = l;
     return (char *) s;
 }
-
+//TODO: check for over/underflow in exponents
+// currently: 10^9 <= exp <= 10^8, a bit more than 2^28
 int mpf_set_str(const char *str, mp_float * c)
 {
     mp_float tmp, ret;
@@ -180,6 +181,7 @@ int mpf_set_str(const char *str, mp_float * c)
     }
     // Add some guard bits
     // adding MP_DIGIT_BIT adds on limb at least
+    // more is necessary for very large exponents only
     eps = c->radix + MP_DIGIT_BIT;
     if ((err = mpf_init(&ret, eps)) != MP_OKAY) {
 	goto free_slen;

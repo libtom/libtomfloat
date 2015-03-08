@@ -35,9 +35,9 @@ int mpf_const_pi(mp_float * a)
 
     oldeps = a->radix;
 
-    // five percent plus 3 bit angst-allowance
+    // two percent plus 3 bit angst-allowance
     // TODO: compute correct value
-    extra = (oldeps / 100) * 5 + 3;
+    extra = 10;//(oldeps / 100) * 2 + 3;
     if (mpf_pi_precision >= oldeps) {
 	if ((err = mpf_copy(&mpf_pi, a)) != MP_OKAY) {
 	    return err;
@@ -68,7 +68,6 @@ int mpf_const_pi(mp_float * a)
 	}
 	// ceil(log_2(radix)) + angst-allowance
 	loops += 3;
-
 	/*
 	 * Initialize:
 	 * a = 1, b = 1/sqrt(2), t = 1/2, k = 1
@@ -177,7 +176,7 @@ int mpf_const_pi(mp_float * a)
 	if ((err = mpf_copy(&mpf_pi, a)) != MP_OKAY) {
 	    goto _ERR;
 	}
-	mpf_pi_precision = oldeps;
+	mpf_pi_precision = eps;
 	return mpf_normalize_to(a, oldeps);
     }
   _ERR:
