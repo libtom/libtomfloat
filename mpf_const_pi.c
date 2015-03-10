@@ -37,7 +37,7 @@ int mpf_const_pi(mp_float * a)
 
     // two percent plus 3 bit angst-allowance
     // TODO: compute correct value
-    extra = 10;//(oldeps / 100) * 2 + 3;
+    extra = (oldeps / 100) * 2 + 3;
     if (mpf_pi_precision >= oldeps) {
 	if ((err = mpf_copy(&mpf_pi, a)) != MP_OKAY) {
 	    return err;

@@ -296,7 +296,3 @@ int mpf_ln_agm(mp_float * a, mp_float * b)
     return err;
 }
 
-int mpf_ln_new(mp_float * a, mp_float * b){
-
-
-}

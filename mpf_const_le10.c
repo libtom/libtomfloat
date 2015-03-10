@@ -12,8 +12,7 @@
  */
 #include <tomfloat.h>
 // http://www.jjj.de/fxt/#fxtbook
-// http://xavier.gourdon.free.fr/Constants/Log2/log2.ps
-static int machin_ln_2(mp_float * a)
+static int machin_ln_10(mp_float * a)
 {
     int err;
     long oldeps, eps;
@@ -39,15 +38,13 @@ static int machin_ln_2(mp_float * a)
 
     // coefficients due to P. Sebah "Machin like formulae for logarithm" (1997)
     // http://numbers.computation.free.fr/Constants/PiProgram/userconstants.html
-    mp_set(&c1, 18);
-    mp_set(&c2, 2);
-    c2.sign = MP_NEG;
-    mp_set(&c3, 8);
+    mp_set(&c1, 46);
+    mp_set(&c2, 34);
+    mp_set(&c3, 20);
 
-    // numbers n such that n+1 and n-1 factor into primes \in {2,3,7}
-    mp_set(&a1, 26);
-    mp_set(&a2, 4801); // http://oeis.org/A214093
-    mp_set(&a3, 8749); // http://oeis.org/A175607
+    mp_set(&a1, 31);
+    mp_set(&a2, 49);
+    mp_set(&a3, 161); // http://oeis.org/A175607
 
     mp_zero(&sum);
     mp_zero(&zero);
@@ -130,38 +127,38 @@ _ERR:
     return err;
 }
 
-static mp_float mpf_le2;
+static mp_float mpf_le10;
 
-static long mpf_le2_precision;
+static long mpf_le10_precision;
 
-int mpf_const_le2(mp_float * a)
+int mpf_const_le10(mp_float * a)
 {
     int err;
     long eps;
 
     err = MP_OKAY;
 
-    if (mpf_le2_precision > 0 && a == NULL) {
-	mpf_clear(&mpf_le2);
-	mpf_le2_precision = 0;
+    if (mpf_le10_precision > 0 && a == NULL) {
+	mpf_clear(&mpf_le10);
+	mpf_le10_precision = 0;
 	return err;
     }
-    if (mpf_le2_precision >= a->radix) {
+    if (mpf_le10_precision >= a->radix) {
 	eps = a->radix;
-	if ((err = mpf_copy(&mpf_le2, a)) != MP_OKAY) {
+	if ((err = mpf_copy(&mpf_le10, a)) != MP_OKAY) {
 	    return err;
 	}
 	return mpf_normalize_to(a, eps);
     } else {
-	if (mpf_le2_precision == 0) {
-	    if ((err = mpf_init(&mpf_le2, a->radix)) != MP_OKAY) {
+	if (mpf_le10_precision == 0) {
+	    if ((err = mpf_init(&mpf_le10, a->radix)) != MP_OKAY) {
 		return err;
 	    }
 	}
-	if ((err = machin_ln_2(&mpf_le2)) != MP_OKAY) {
+	if ((err = machin_ln_10(&mpf_le10)) != MP_OKAY) {
 	    return err;
 	}
-	if ((err = mpf_copy(&mpf_le2, a)) != MP_OKAY) {
+	if ((err = mpf_copy(&mpf_le10, a)) != MP_OKAY) {
 	    return err;
 	}
     }

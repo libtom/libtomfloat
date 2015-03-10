@@ -33,6 +33,7 @@ mpf_normalize.o mpf_normalize_to.o mpf_iterations.o \
 mpf_const_0.o    mpf_const_1r2.o  mpf_const_2rpi.o  mpf_const_e.o     \
 mpf_const_l2e.o  mpf_const_pi.o   mpf_const_pi4.o   mpf_const_1pi.o   \
 mpf_const_2pi.o  mpf_const_d.o    mpf_const_l10e.o  mpf_const_le2.o   \
+mpf_const_le10.o\
 mpf_const_pi2.o  mpf_const_r2.o   mpf_const_ln_d.o                    \
 \
 mpf_mul_2.o mpf_div_2.o mpf_add.o mpf_sub.o mpf_mul.o mpf_sqr.o mpf_div.o \
@@ -63,6 +64,7 @@ mpf_sinh.o mpf_cosh.o mpf_tanh.o\
 mpf_atanh.o mpf_kernel_atan.o\
 mpf_atan2.o\
 mpf_asinh.o mpf_acosh.o\
+mp_acoth_binary_splitting.o mp_acot_binary_splitting.o\
 mpf_lambertw.o
 
 

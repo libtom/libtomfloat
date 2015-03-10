@@ -77,6 +77,7 @@ int  mpf_const_e(mp_float *a);                  /* e             */
 int  mpf_const_l2e(mp_float *a);                /* log_2 e       */
 int  mpf_const_l10e(mp_float *a);               /* log_10 e      */
 int  mpf_const_le2(mp_float *a);                /* log_e 2       */
+int  mpf_const_le10(mp_float *a);               /* log_e 10      */
 int  mpf_const_pi(mp_float *a);                 /* Pi            */
 int  mpf_const_pi2(mp_float *a);                /* Pi/2          */
 int  mpf_const_pi4(mp_float *a);                /* Pi/4          */
@@ -189,7 +190,12 @@ int mpf_atanh(mp_float * a, mp_float * b);
 int mpf_asinh(mp_float * a, mp_float * b);
 int mpf_acosh(mp_float * a, mp_float * b);
 
+// integer trig. functions (for Machin's fomrulas)
+#define mp_isone(a) ( (a)->used == 1 && (a)->dp[0] == 1 && (a)->sign == MP_ZPOS )
+int mp_acoth_binary_splitting(mp_int * q, mp_int * a, mp_int * b, mp_int * P, mp_int * Q, mp_int * R);
+int mp_acot_binary_splitting(mp_int * q, mp_int * a, mp_int * b, mp_int * P, mp_int * Q, mp_int * R);
 
+// Lambert-W aka ProductLog
 int mpf_lambertw(mp_float *a, mp_float *b, int branch);
 
 
