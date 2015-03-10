@@ -239,7 +239,7 @@ int mpf_sqrt(mp_float * a, mp_float * b)
 	}
 	if ((err =
 	     mpf_normalize_to_multi(starteps, &one, &x0, &xn, &A, &hn,
-				    &EPS)) != MP_OKAY) {
+				    &EPS, NULL)) != MP_OKAY) {
 	    return err;
 	}
 	// TODO: check if "one" always holds one (it must, but one never knows)
