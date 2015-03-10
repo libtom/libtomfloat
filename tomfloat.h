@@ -61,6 +61,7 @@ void mpf_exch(mp_float *a, mp_float *b);
 /* maintainers/misc */
 int  mpf_normalize(mp_float *a);
 int  mpf_normalize_to(mp_float *a, long radix);
+int  mpf_normalize_to_multi(long radix, mp_float *a, ...);
 int  mpf_iterations(mp_float *a);
 int  mpf_from_mp_int(mp_int * a, mp_float * b);
 
