@@ -49,7 +49,7 @@ int  mpf_invsqrt(mp_float *a, mp_float *b)
     if ((err = mpf_copy(&A, &xn)) != MP_OKAY) {
 	goto _ERR;
     }
-    xn.exp /= 2; 
+    xn.exp -= (xn.exp +  xn.radix)/2 - 1;
     if ((err = mpf_inv(&xn, &xn)) != MP_OKAY) {
 	goto _ERR;
     }

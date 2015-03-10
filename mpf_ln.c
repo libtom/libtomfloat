@@ -66,17 +66,20 @@ int mpf_ln(mp_float * a, mp_float * b)
 	return MP_OKAY;
     }
     mpf_clear(&one);
-    ar = 4096;
+    // see mpf_global_variables.c (original was set at 4096)
+    ar = MPF_LOG_AGM_REDUX_CUTOFF;
 
     oldeps = a->radix;
     // one limb extra precision
     eps = oldeps + MP_DIGIT_BIT;
     // Log by the AGM is faster already at some very low cutoff. Somebody
     // (Borwein?) said it would be faster at about 16 decimal digits precision.
-    // The original value of the cutoff is set at 4 * MP_DIGITS_BITS but your
-    // version might have changed that (in mpf_global_variables.c)
-    // TODO: an excemption to this cutoff for _very_ small input
-    if (a->radix >= MPF_LOG_AGM_CUTOFF) {
+    // The original value of the cutoff is set at 2,000 bitas radix and
+    // 100 bits absolute size (~10^30) but your version might have changed that
+    // see mpf_global_variables.c for the exact values and adjust according to
+    // your needs. Please contact the author if you did so succesfully.
+    if (a->radix >= MPF_LOG_AGM_1_CUTOFF &&
+        a->exp + a->radix >=  MPF_LOG_AGM_2_CUTOFF) {
         return mpf_ln_agm(a, b);
     }
     // TODO: make series an extra function (useful for e.g.: benchmarking)
@@ -100,6 +103,7 @@ int mpf_ln(mp_float * a, mp_float * b)
 	goto _ERR;
     }
     // work on mantissa which has the guaranteed magnitude .5<=x<1
+
     if ((err = mpf_frexp(&x, &frac, &expnt)) != MP_OKAY) {
 	goto _ERR;
     }
@@ -166,7 +170,7 @@ int mpf_ln(mp_float * a, mp_float * b)
 	n++;
     } while (mpf_cmp(&x0, &ret) != MP_EQ);
 
-    if ((err = mpf_const_ln_d(&one, 2)) != MP_OKAY) {
+    if ((err = mpf_const_le2(&one)) != MP_OKAY) {
 	goto _ERR;
     }
     // ret = ret * argred + (exponent * log(2))
@@ -292,3 +296,7 @@ int mpf_ln_agm(mp_float * a, mp_float * b)
     return err;
 }
 
+int mpf_ln_new(mp_float * a, mp_float * b){
+
+
+}

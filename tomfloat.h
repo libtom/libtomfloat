@@ -33,7 +33,9 @@ extern long mpf_global_radix;
 extern int mpf_errno;
 
 /* Some cutoffs */
-extern int MPF_LOG_AGM_CUTOFF;
+extern int MPF_LOG_AGM_1_CUTOFF;
+extern int MPF_LOG_AGM_2_CUTOFF;
+extern long MPF_LOG_AGM_REDUX_CUTOFF;
 /* Handling of the precision set above */
 long mpf_getprecision();
 long mpf_getdecimalprecision();

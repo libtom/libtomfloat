@@ -89,7 +89,9 @@ int  mpf_sqrt(mp_float *a, mp_float *b)
     if ((err = mpf_copy(&A, &xn)) != MP_OKAY) {
 	goto _ERR;
     }
-    xn.exp /= 2; 
+
+    xn.exp -= (xn.exp +  xn.radix)/2 - 1;
+
     if ((err = mpf_inv(&xn, &xn)) != MP_OKAY) {
 	goto _ERR;
     }
@@ -106,8 +108,7 @@ int  mpf_sqrt(mp_float *a, mp_float *b)
     if ((err = mpf_const_eps(&EPS)) != MP_OKAY) {
 	goto _ERR;
     }
-    // TODO: work with increasing precision, starting at radix = 50, the
-    //       accuracy of the initial value and double each round
+    // TODO: work with increasing precision, starting at radix = 50 (or so)
     do {
 	if ((err = mpf_copy(&xn, &x0)) != MP_OKAY) {
 	    goto _ERR;
@@ -143,7 +144,7 @@ int  mpf_sqrt(mp_float *a, mp_float *b)
 	nloops++;
 	if (nloops >= maxrounds) {
 	    // it might be a bug elsewhere, please report
-	    fprintf(stderr, "mpf_invsqrt did not converge in %ld rounds\n",
+	    fprintf(stderr, "mpf_sqrt did not converge in %ld rounds\n",
 		    nloops);
 	    return MP_RANGE;
 	}
