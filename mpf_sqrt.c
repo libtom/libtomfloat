@@ -175,6 +175,7 @@ int mpf_sqrt_normal(mp_float * a, mp_float * b)
 //      old:  ~7.0s
 //      new:  ~3.5s
 //      Alternatives: check size and branch or raise starting precision
+//      NOTE: halfs time of computing log by the AGM at 100 dec. digits already
 int mpf_sqrt(mp_float * a, mp_float * b)
 {
     int err, sign;

@@ -73,6 +73,8 @@ int  mpf_const_d(mp_float *a, long d);          /* valid d */
 int  mpf_const_ln_d(mp_float *a, long b);       /* a = ln(b)     */
 int  mpf_const_sqrt_d(mp_float *a, long b);     /* a = sqrt(b);  */
 
+int  mpf_const_gamma(mp_float * a);             /* Euler-Gamma ~0.577215 */
+
 /* math constants as they appear in math.h */
 int  mpf_const_e(mp_float *a);                  /* e             */
 int  mpf_const_l2e(mp_float *a);                /* log_2 e       */

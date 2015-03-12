@@ -74,11 +74,11 @@ int mpf_ln(mp_float * a, mp_float * b)
     eps = oldeps + MP_DIGIT_BIT;
     // Log by the AGM is faster already at some very low cutoff. Somebody
     // (Borwein?) said it would be faster at about 16 decimal digits precision.
-    // The original value of the cutoff is set at 2,000 bitas radix and
+    // The original value of the cutoff is set at 2,000 bits radix and
     // 100 bits absolute size (~10^30) but your version might have changed that
     // see mpf_global_variables.c for the exact values and adjust according to
     // your needs. Please contact the author if you did so succesfully.
-    if (a->radix >= MPF_LOG_AGM_1_CUTOFF &&
+    if (a->radix >= MPF_LOG_AGM_1_CUTOFF ||
         a->exp + a->radix >=  MPF_LOG_AGM_2_CUTOFF) {
         return mpf_ln_agm(a, b);
     }

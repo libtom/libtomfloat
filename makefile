@@ -35,6 +35,7 @@ mpf_const_l2e.o  mpf_const_pi.o   mpf_const_pi4.o   mpf_const_1pi.o   \
 mpf_const_2pi.o  mpf_const_d.o    mpf_const_l10e.o  mpf_const_le2.o   \
 mpf_const_le10.o\
 mpf_const_pi2.o  mpf_const_r2.o   mpf_const_ln_d.o                    \
+mpf_const_gamma.o\
 \
 mpf_mul_2.o mpf_div_2.o mpf_add.o mpf_sub.o mpf_mul.o mpf_sqr.o mpf_div.o \
 mpf_add_d.o mpf_sub_d.o mpf_mul_d.o mpf_div_d.o \
