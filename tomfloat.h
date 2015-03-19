@@ -162,6 +162,8 @@ int mpf_get_str(mp_float * a, char **str, int base);
 int mpf_get_double(double d, mp_float * a);
 int mpf_set_double(mp_float * a, double *d);
 
+int mpf_set_int(mp_float * a, int d);
+
 int mpf_frexp(mp_float * a, mp_float * b, long *exp);
 int mpf_ldexp(mp_float * a, long exp, mp_float * b);
 
