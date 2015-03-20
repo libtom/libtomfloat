@@ -203,7 +203,9 @@ int mp_acot_binary_splitting(mp_int * q, mp_int * a, mp_int * b, mp_int * P, mp_
 // Lambert-W aka ProductLog
 int mpf_lambertw(mp_float *a, mp_float *b, int branch);
 
-
+// gamma functions (Spouge. Slow but do not need Bernoulli numbers)
+int mpf_lngamma(mp_float *a, mp_float *b);
+int mpf_gamma(mp_float *a, mp_float *b);
 
 /* temporary functions. if this is non-empty you have just entered
    development area and are on your own risk from now on */

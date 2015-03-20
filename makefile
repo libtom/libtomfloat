@@ -67,7 +67,8 @@ mpf_atanh.o mpf_kernel_atan.o\
 mpf_atan2.o\
 mpf_asinh.o mpf_acosh.o\
 mp_acoth_binary_splitting.o mp_acot_binary_splitting.o\
-mpf_lambertw.o
+mpf_lambertw.o\
+mpf_gamma.o
 
 
 
