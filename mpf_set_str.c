@@ -68,7 +68,7 @@ int mpf_set_str(const char *str, mp_float * c)
     int sign = MP_ZPOS;
     int base = 10;
     char *exponent, *endptr;
-    size_t *slen = 0, k = 0;
+    size_t slen = 0, k = 0;
     long expo = 0, decimalpoint = -1, fdigs = 0, eps;
     int err;
 
@@ -144,17 +144,19 @@ int mpf_set_str(const char *str, mp_float * c)
      * two other bases.
      */
     // simply count length instead of illegible pointer juggling
+/*
     slen = malloc(sizeof(size_t));
     if (NULL == slen) {
 	fprintf(stderr, "malloc failed to allocate a single size_t\n");
     }
-    *slen = strlen(str);
+*/
+    slen = strlen(str);
     exponent = NULL;
     if (base == 10) {
-	exponent = strcasechar(str, 'e', slen);
+	exponent = strcasechar(str, 'e', &slen);
     }
     if (base == 2 || base == 16) {
-	exponent = strcasechar(str, 'p', slen);
+	exponent = strcasechar(str, 'p', &slen);
     }
     if (exponent != NULL) {
 	// skip the exponent mark
@@ -164,7 +166,6 @@ int mpf_set_str(const char *str, mp_float * c)
 	if ((errno == ERANGE && (expo == LONG_MAX || expo == LONG_MIN))
 	    || (errno != 0 && expo == 0)) {
 	    fprintf(stderr, "An error occured in parsing the exponent\n");
-	    free(slen);
 	    if ((err = mpf_const_nan(c)) != MP_OKAY) {
 		return err;
 	    }
@@ -172,7 +173,7 @@ int mpf_set_str(const char *str, mp_float * c)
 	}
 	if (endptr == exponent) {
 	    fprintf(stderr, "No digits in the exponent\n");
-	    free(slen);
+
 	    if ((err = mpf_const_nan(c)) != MP_OKAY) {
 		return err;
 	    }
@@ -182,13 +183,14 @@ int mpf_set_str(const char *str, mp_float * c)
     // Add some guard bits
     // adding MP_DIGIT_BIT adds on limb at least
     // more is necessary for very large exponents only
+    // TODO: compute more exactly
     eps = c->radix + MP_DIGIT_BIT;
     if ((err = mpf_init(&ret, eps)) != MP_OKAY) {
-	goto free_slen;
+	return err;
     }
 
 
-    while (*str != '\0' && k++ < *slen) {
+    while (*str != '\0' && k++ < slen) {
 	switch (tolower(*str)) {
 	case '0':
 	case '1':
@@ -213,7 +215,6 @@ int mpf_set_str(const char *str, mp_float * c)
 	    if (base == 2) {
 		fprintf(stderr, "wrong digit for base %i found\n", base);
 		mpf_clear(&ret);
-		free(slen);
 		if ((err = mpf_const_nan(c)) != MP_OKAY) {
 		    return err;
 		}
@@ -237,7 +238,6 @@ int mpf_set_str(const char *str, mp_float * c)
 	case 'f':
 	    if (base == 2 || base == 10) {
 		fprintf(stderr, "wrong digit for base %i found\n", base);
-		free(slen);
 		mpf_clear(&ret);
 		if ((err = mpf_const_nan(c)) != MP_OKAY) {
 		    return err;
@@ -263,7 +263,6 @@ int mpf_set_str(const char *str, mp_float * c)
 	    break;
 	default:
 	    fprintf(stderr, "Unknown character %c found\n", *str);
-	    free(slen);
 	    mpf_clear(&ret);
 	    if ((err = mpf_const_nan(c)) != MP_OKAY) {
 		return err;
@@ -275,7 +274,6 @@ int mpf_set_str(const char *str, mp_float * c)
     // take every chance to get out early
     if (mpf_iszero(&ret)) {
 	mpf_clear(&ret);
-	free(slen);
 	return MP_OKAY;
     }
     if ((err = mpf_init(&tmp, eps)) != MP_OKAY) {
@@ -323,8 +321,6 @@ int mpf_set_str(const char *str, mp_float * c)
     mpf_clear(&tmp);
   clear_ret:
     mpf_clear(&ret);
-  free_slen:
-    free(slen);
     return err;
 }
 
