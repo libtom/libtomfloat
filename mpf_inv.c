@@ -120,7 +120,8 @@ int mpf_inv(mp_float * a, mp_float * b)
 	goto _ERR;
     }
     mpf_exch(&xn, b);
-    /* now restore the sign */
+    /* now restore the signs */
+    a->mantissa.sign = sign;
     b->mantissa.sign = sign;
 
 _ERR:
