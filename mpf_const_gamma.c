@@ -126,7 +126,7 @@ static int brent_macmillan_gamma(mp_float * a)
 }
 
 
-static mp_float mpf_gamma;
+static mp_float mpf_egamma;
 
 static long mpf_gamma_precision;
 
@@ -138,26 +138,26 @@ int mpf_const_gamma(mp_float * a)
     err = MP_OKAY;
 
     if (mpf_gamma_precision > 0 && a == NULL) {
-	mpf_clear(&mpf_gamma);
+	mpf_clear(&mpf_egamma);
 	mpf_gamma_precision = 0;
 	return err;
     }
     if (mpf_gamma_precision >= a->radix) {
 	eps = a->radix;
-	if ((err = mpf_copy(&mpf_gamma, a)) != MP_OKAY) {
+	if ((err = mpf_copy(&mpf_egamma, a)) != MP_OKAY) {
 	    return err;
 	}
 	return mpf_normalize_to(a, eps);
     } else {
 	if (mpf_gamma_precision == 0) {
-	    if ((err = mpf_init(&mpf_gamma, a->radix)) != MP_OKAY) {
+	    if ((err = mpf_init(&mpf_egamma, a->radix)) != MP_OKAY) {
 		return err;
 	    }
 	}
-	if ((err = brent_macmillan_gamma(&mpf_gamma)) != MP_OKAY) {
+	if ((err = brent_macmillan_gamma(&mpf_egamma)) != MP_OKAY) {
 	    return err;
 	}
-	if ((err = mpf_copy(&mpf_gamma, a)) != MP_OKAY) {
+	if ((err = mpf_copy(&mpf_egamma, a)) != MP_OKAY) {
 	    return err;
 	}
     }

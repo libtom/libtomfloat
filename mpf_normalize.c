@@ -12,11 +12,13 @@
  */
 #include <tomfloat.h>
 
+#include <fenv.h>
+
 int mpf_normalize(mp_float * a)
 {
     long cb, diff;
-    int err;
-    mp_digit c;
+    int err, rounding_mode;
+    mp_digit c, t;
 
     /* sanity */
     if (a->radix < 2) {
@@ -28,17 +30,70 @@ int mpf_normalize(mp_float * a)
 	diff = cb - a->radix;
 	a->exp += diff;
 
-	/* round it, add 1 after shift if diff-1'th bit is 1 */
+	/* round it */
 	c = a->mantissa.dp[diff / DIGIT_BIT] & (1U << (diff % DIGIT_BIT));
+	t = a->mantissa.dp[(diff + 1) /
+			   DIGIT_BIT] & (1U << ((diff + 1) % DIGIT_BIT));
 	if ((err =
 	     mp_div_2d(&(a->mantissa), diff, &(a->mantissa),
 		       NULL)) != MP_OKAY) {
 	    return err;
 	}
-
 	if (c != 0) {
-	    if((err = mp_add_d(&(a->mantissa), 1, &(a->mantissa))) != MP_OKAY){
-	        return err;
+	    // only those modes that are defined in C-89
+	    rounding_mode = fegetround();
+	    switch (rounding_mode) {
+		// half to even
+	    case FE_TONEAREST:
+		// if even
+		if (t != 0) {
+		    if (a->mantissa.sign == MP_ZPOS) {
+			if ((err =
+			     mp_add_d(&(a->mantissa), 1,
+				      &(a->mantissa))) != MP_OKAY) {
+			    return err;
+			}
+		    } else {
+			if ((err =
+			     mp_sub_d(&(a->mantissa), 1,
+				      &(a->mantissa))) != MP_OKAY) {
+			    return err;
+			}
+		    }
+		}
+		break;
+		// towards positive infinity
+	    case FE_UPWARD:
+		if ((err =
+		     mp_add_d(&(a->mantissa), 1, &(a->mantissa))) != MP_OKAY) {
+		    return err;
+		}
+		break;
+		// towards negative infinity
+	    case FE_DOWNWARD:
+		if ((err =
+		     mp_sub_d(&(a->mantissa), 1, &(a->mantissa))) != MP_OKAY) {
+		    return err;
+		}
+		break;
+		// towards zero, as the name of the macro suggests
+	    case FE_TOWARDZERO:
+		if (a->mantissa.sign == MP_ZPOS) {
+		    if ((err =
+			 mp_sub_d(&(a->mantissa), 1,
+				  &(a->mantissa))) != MP_OKAY) {
+			return err;
+		    }
+		} else {
+		    if ((err =
+			 mp_add_d(&(a->mantissa), 1,
+				  &(a->mantissa))) != MP_OKAY) {
+			return err;
+		    }
+		}
+		break;
+	    default:
+		return MP_VAL;
 	    }
 	    // in case of a carry: shift one right; rinse and repeat
 	    if (mp_count_bits(&(a->mantissa)) > cb) {
@@ -47,13 +102,11 @@ int mpf_normalize(mp_float * a)
 			       NULL)) != MP_OKAY) {
 		    return err;
 		}
-                a->exp += 1;
-                goto loop;
+		a->exp += 1;
+		goto loop;
 	    } else {
-	        return MP_OKAY;
+		return MP_OKAY;
 	    }
-	} else {
-	    return MP_OKAY;
 	}
     } else if (cb < a->radix) {
 	if (mp_iszero(&(a->mantissa)) == MP_YES) {
