@@ -18,7 +18,7 @@ int mpf_normalize(mp_float * a)
 {
     long cb, diff;
     int err, rounding_mode;
-    mp_digit c, t;
+    mp_digit c, t, g, lsb;
 
     /* sanity */
     if (a->radix < 2) {
@@ -30,10 +30,15 @@ int mpf_normalize(mp_float * a)
 	diff = cb - a->radix;
 	a->exp += diff;
 
-	/* round it */
+	/* round it (lsb, g,t,c) */
+        // TODO: down't work this way, of course but is it necessary to add
+        //       the necessary three bits?
 	c = a->mantissa.dp[diff / DIGIT_BIT] & (1U << (diff % DIGIT_BIT));
-	t = a->mantissa.dp[(diff + 1) /
-			   DIGIT_BIT] & (1U << ((diff + 1) % DIGIT_BIT));
+	t = a->mantissa.dp[(diff - 1) /
+			   DIGIT_BIT] & (1U << ((diff - 1) % DIGIT_BIT));
+        //t = 0;
+	/*g = a->mantissa.dp[(diff - 2) /
+			   DIGIT_BIT] & (1U << ((diff - 2) % DIGIT_BIT));*/
 	if ((err =
 	     mp_div_2d(&(a->mantissa), diff, &(a->mantissa),
 		       NULL)) != MP_OKAY) {
@@ -46,7 +51,7 @@ int mpf_normalize(mp_float * a)
 		// half to even
 	    case FE_TONEAREST:
 		// if even
-		if (t != 0) {
+		//if (t != 0) {
 		    if (a->mantissa.sign == MP_ZPOS) {
 			if ((err =
 			     mp_add_d(&(a->mantissa), 1,
@@ -60,7 +65,7 @@ int mpf_normalize(mp_float * a)
 			    return err;
 			}
 		    }
-		}
+		//}
 		break;
 		// towards positive infinity
 	    case FE_UPWARD:

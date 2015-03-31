@@ -35,9 +35,9 @@ int mpf_const_pi(mp_float * a)
 
     oldeps = a->radix;
 
-    // two percent plus 3 bit angst-allowance
+    // two percent plus  angst-allowance
     // TODO: compute correct value
-    extra = (oldeps / 100) * 2 + 3;
+    extra = (oldeps / 100) * 2 + MP_DIGIT_BIT;
     if (mpf_pi_precision >= oldeps) {
 	if ((err = mpf_copy(&mpf_pi, a)) != MP_OKAY) {
 	    return err;
@@ -148,6 +148,8 @@ int mpf_const_pi(mp_float * a)
 		err = MP_VAL;
 		fprintf(stderr, "Pi by AGM did not converge in %ld rounds\n",
 			k);
+printf("aa ");mp_put(&(aa.mantissa),16);puts("");
+printf("bb ");mp_put(&(b.mantissa),16);puts("");
 		goto _ERR;
 	    }
 	} while (mpf_cmp(&aa, &b) != MP_EQ);

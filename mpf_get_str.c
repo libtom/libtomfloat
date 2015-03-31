@@ -250,7 +250,6 @@ int mpf_get_str(mp_float * a, char **str, int base)
     } else {
 	// it is not necessarily an integer
 	decexpo = mpf_getdecimalexponent(a->exp);
-
 	if ((err = mpf_init(&ret2, eps)) != MP_OKAY) {
 	    mp_clear(&ret);
 	    return err;
@@ -340,7 +339,10 @@ int mpf_get_str(mp_float * a, char **str, int base)
         // int mp_radix_size (mp_int * a, int radix, int *size)
         // It returns the size according to the base but does it by
         // actually doing the conversion which makes it costly.
-	digits = (int) strlen(*str);
+	//digits =  (int) strlen(*str);
+        mp_radix_size(&ret,10,&digits);
+        digits--;
+printf("digits = %d, strlen = %d, decprec = %d, decexpo = %d\n", digits, (int)strlen(*str), decprec, decexpo);
 	if (sign == MP_NEG) {
 	    digits--;
 	}

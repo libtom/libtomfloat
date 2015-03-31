@@ -14,7 +14,7 @@ int mpf_const_nan(mp_float * a)
     }
     a->mantissa.dp[a->mantissa.used] = (mp_digit)(1);
     // set exponent to all-ones
-    a->exp = 1 << ((sizeof(long) * CHAR_BIT) - 1);
+    a->exp = LONG_MAX;
     // keep sign as it is and do not normalize
     return MP_OKAY;
 }

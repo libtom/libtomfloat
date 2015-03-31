@@ -10,9 +10,9 @@ int mpf_const_inf(mp_float * a, int sign)
 	    return err;
 	}
     }
-    a->mantissa.dp[a->mantissa.used] = (mp_digit) (0);
-    // set exponent to all-ones
-    a->exp = 1 << ((sizeof(long) * CHAR_BIT) - 1);
+    a->mantissa.dp[a->mantissa.used - 1] = (mp_digit) (0);
+    // set exponent to LONG_MAX
+    a->exp = LONG_MAX;
     // keep sign as it is and do not normalize
     a->mantissa.sign = sign;
     return MP_OKAY;

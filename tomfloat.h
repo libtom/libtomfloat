@@ -117,14 +117,14 @@ int  mpf_cmp_d(mp_float *a, long b, int *res);
 ( \
 a->mantissa.dp[a->mantissa.used - 1] ==  (mp_digit) (1) \
 && \
-a->exp == 1 << ((sizeof(long) * CHAR_BIT) - 1)\
+a->exp == LONG_MAX\
 )
 
 #define mpf_isinf(a) \
 ( \
 a->mantissa.dp[a->mantissa.used - 1] ==  (mp_digit) (0) \
 && \
-a->exp == 1 << ((sizeof(long) * CHAR_BIT) - 1)\
+a->exp == LONG_MAX\
 )
 
 #define mpf_isdouble(a) (-(1021 + a->radix) <= a->exp && a->exp <= (1024 - a->radix))
