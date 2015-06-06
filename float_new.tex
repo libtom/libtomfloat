@@ -1,0 +1,991 @@
+\documentclass[a4paper]{book}
+\usepackage{hyperref}
+\usepackage{makeidx}
+\usepackage{latexsym,url,amsmath, amsthm,amsfonts,amssymb}
+\usepackage{color}
+\usepackage{alltt}
+\usepackage{graphicx}
+\usepackage{layout}
+\usepackage{epigraph}
+\newif\ifpdf
+\ifx\pdfoutput\undefined
+\pdffalse
+\else
+\pdfoutput=1
+\pdfcompresslevel=9
+\pdftrue
+\fi
+\ifpdf\pdfinfo{
+   /Title      (Description of Libtomfloat)
+   /Author     (Christoph Zurnieden)            
+   /Keywords   (Floats Arbitrary Multiprecision)
+}
+% \usepackage{thumbpdf}
+% don't forget 'thumbpdf.pl --antialias 4 $this_texfile.pdf'
+\fi
+\newcommand{\aname}[1]{\scshape{#1}}
+\newcommand{\fname}[1]{\texttt{#1}}
+\newcommand{\sbinom}[2]{\genfrac{[}{]}{0pt}{}{{#1}}{#2}}
+\newcommand{\field}[1]{\mathbb{#1}}
+\newcommand{\N}{\field{N}}
+\newcommand{\Z}{\field{Z}}
+\newcommand{\Q}{\field{Q}}
+\newcommand{\R}{\field{R}}
+\newcommand{\C}{\field{C}}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{corr}{Corollary}
+\theoremstyle{definition}
+\newtheorem{defn}{Definition}[section]
+\newtheorem{exmpl}{Example}[section]
+\theoremstyle{remark}
+\newtheorem{rem}{Remark}[section]
+\newtheorem*{notation}{Notation}
+
+\providecommand{\abs}[1]{\lvert#1\rvert}
+\providecommand{\norm}[1]{\lVert#1\rVert}
+\providecommand{\floor}[1]{\left\lfloor#1\right\rfloor}
+\providecommand{\ceil}[1]{\left\lceil#1\right\rceil}
+\providecommand{\SET}[1]{\mathbf{#1}}
+
+\def\Approx{\raisebox{0.2ex}{\mbox{\small $\sim$}}}
+
+\DeclareMathOperator{\D}{d}
+\DeclareMathOperator{\AND}{\wedge}
+\DeclareMathOperator{\OR}{\vee}
+\DeclareMathOperator{\XOR}{\otimes}
+\DeclareMathOperator{\cinv}{inv}
+\DeclareMathOperator{\odd}{odd}
+\DeclareMathOperator{\even}{even}
+
+\DeclareMathOperator{\DOM}{dom}
+\DeclareMathOperator{\RAN}{ran}
+\DeclareMathOperator{\FIELD}{field}
+
+\DeclareMathOperator{\atan}{atan}
+\DeclareMathOperator{\asin}{asin}
+\DeclareMathOperator{\acos}{acos}
+
+\DeclareMathOperator{\atanh}{atanh}
+\DeclareMathOperator{\asinh}{asinh}
+\DeclareMathOperator{\acosh}{acosh}
+
+% inverse diagonal dots. Just \ddots with the boxes exchanged
+% If you want a more refined version try mathdots.sty
+% by Daniel H. Luecking at http://comp.uark.edu/~luecking/tex/mathdots.sty
+\def\iddots{\mathinner{\mkern1mu\raise\p@\hbox{.}
+\mkern2mu\raise4\p@\hbox{.}
+\mkern2mu\raise7\p@\vbox{\kern7\p@\hbox{.}}
+\mkern1mu}}
+
+\newcommand{\emailaddr}[1]{\mbox{$<${#1}$>$}}
+
+\makeindex
+\begin{document}
+\frontmatter
+\pagestyle{empty}
+\title{LibTomFloat User Manual \\ v0.03}
+\author{Christoph Zurnieden \\ czurnieden@gmx.de}
+\maketitle
+
+\tableofcontents
+\listoffigures
+\mainmatter
+\pagestyle{headings}
+\chapter*{Foreword}
+This library was little more than an idea when Tom St Denis left the building---not much has been written at that point, so I decided to give it a fresh start. I kept the basic architecture, not because it was the finest and fastest but for its cleanness and legibility. There are a lot of these things things around\footnote{Actually: just about half a dozen} but they all wanted to be as fast as possible but be correct at the same time and readability was not their first goal, far from it.
+
+This means, of course, that everything that is {\emph{unnecessarily}} complicated has to be considered a bug. Everything that is unclear and/or insufficiently described is also a bug.
+
+The final goal is to follow IEEE-754 as close as possible and implement the functions listed in POSIX\footnote{\url{http://www.unix.org/online.html}. But you need to register and they want to know a lot, even Google is more mercieful. But there is an online version at the Opengroups website at \url{http://pubs.opengroup.org/onlinepubs/9699919799/} which is the current (2013) standard. The list of {\texttt{math.h}} is at \url{http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/math.h.html}} if applicable. The table of contents at the beginning should reflect what is planned in more details. Thread safety is either done directly in this library or within an extra library, I am still undecided; thread--safety makes things more complicated, sometimes a lot. As long as only caching is involved, where a simple {\texttt{mutex}} suffices it will be implemented at one point in time. For others\ldots
+
+As long as these goals are not even in sight the warnings in the file \textit{WARNING} still hold!
+
+{\textbf{Note: }}This document contains excerpts from Tom St Denis' original document, especially in the first chapters which describe the basic architecture of this library. I cannot put in exact quotes because I had to add changes to his original text more or less throughout to adapt to the changes I made in the code. The original file is still in this packet and is named {\texttt{float.tex}}.
+
+\chapter{Introduction}
+
+\epigraph{Manuals just slow you down and make you feel stupid. The directions are too slow, too detailed, and use too much abstract, arcane or academic language, like {\texttt {boot up}} instead of turn on the red switch in the back.}{\textit{ Neil Fiore, psychologist and executive coach }}
+
+\section{What is LibTomFloat?}
+LibTomFloat is a library of source code that provides multiple precision floating point arithmetic.  It allows developers to manipulate floating point numbers of variable precision.  The library was written in portable ISO C source code and depends upon the public domain LibTomMath package.
+
+Along with providing the core mathematical operations such as addition and subtraction LibTomFloat also provides various complicated algorithms such as trigonometry's sine, cosine and tangent operators as well as Calculus's square root, inverse square root, exponential and logarithm
+operators.
+
+LibTomFloat has been written for portability and numerical stability and is not particularly optimized for any given platform. It uses optimal algorithms for manipulating the mantissa by using LibTomMath and uses numerically stable algorithms for the various trigonometric and calculus functions.
+
+\section{License}
+LibTomFloat is public domain.
+
+This might not be possible in some jurisdictions!
+
+\section{Building LibTomFloat}
+LibTomFloat requires version 0.42 or higher of LibTomMath to be installed in order to build.  Once LibTomMath is installed building LibTomFloat is as simple as:
+
+\begin{alltt}
+make
+\end{alltt}
+
+Which will build ``libtomfloat.a'' and along with ``tomfloat.h'' complete an installation of LibTomFloat.  You can also use the make target ``install'' to automatically build and copy the files (into *NIX specific) locations.  
+
+\begin{alltt}
+make install
+\end{alltt}
+
+\textbf{Note}: LibTomFloat does use the native {\texttt {double}} type in some places despite Tom St Denis' promise not to. It is inevitable in two functions {\texttt {mpf\_get\_double}} and {\texttt {mpf\_set\_double}} and is used in other functions, too. That makes linking {\texttt {libm}} necessary.
+
+Another alternatve would be to write your own functions for the {\texttt{double}} data type. The ones used are: {\texttt{log}}, {\texttt{round}}, {\texttt{lround}}, and {\texttt{floor}}. Depending on your needs regarding the license it is strongly recommended to use the already well tested code from a BSD derivate or similar, for example the one from NetBSD at 
+\url{http://ftp.twaren.net/BSD/NetBSD/NetBSD-current/src/lib/libm/src/}. NetBSD should support most CPU architectures.
+
+
+\section{Purpose of LibTomFloat}
+LibTomFloat is as much as an exercise in hardcore math for myself\footnote{Tom St Denis} as it is a service to any programmer who needs multi--precision floating point data types. ISO C provides for fairly reasonable precision floating point data types but is limited. A proper analogy is LibTomFloat solves ISO C's floating point problems in the same way LibTomMath solves ISO C's integer data type problems.
+
+A classic example of a good use for large precision floats is long simulations where the numbers are not perfectly stable.  A $128$--bit mantissa (for example) can provide for exceptional precision.
+
+That and knowing the value of $e$ to 512 bits is fun\footnote{It is possible now to calculate the first million decimal digits of $\pi$ in a couple of seconds even on a modest machine}.
+
+\section{How the types work}
+
+\index{mantissa} \index{exponent}
+The floating point types are emulated with three components. The \textbf{mantissa}, the \textbf{exponent} and the \textbf{radix}. The mantissa forms the digits of number being represented. The exponent scales the number to give it a larger range.  The radix controls how many bits there are in the mantissa.  The larger the radix the more precise the types become.  
+
+The representation of a number is given by the simple product $m \cdot 2^e$ where $m$ is the mantissa and $e$ the exponent.  Numbers are always normalized such that there are $radix$ bits per mantissa.  For example, with $radix = 16$ the number $2$ is represented by $32768 \cdot 2^{-14}$.  A zero is represented by a mantissa of zero and an exponent of one and is a special case.
+
+The sign flag is a standard ISO C ``long'' which gives it the range $2^{-31} \le e < 2^{31}$ which is considerably large\footnote{This has been written in times of 32--bit machines. It is quite a bit larger now which is nice at the first glance but causes several problems, too}.
+
+Technically, LibTomFloat does not implement IEEE standard floating point types.  The exponent is not normalized and the sign flag does not count as a bit in the radix.  There is also no ``implied'' bit in this system. The mantissa explicitly dictates the digits.
+
+\chapter{Getting Started with LibTomFloat}
+\section{Building Programs}
+In order to use libTomFloat you must include ``tomfloat.h'' and link against the appropriate library file (typically {\texttt {libtomfloat.a}}) and the mathematical library {\texttt {libm}}.  There is no library initialization.
+
+\section{Return Codes}
+There are three possible return codes a function may return.
+
+\index{MP\_OKAY}\index{MP\_YES}\index{MP\_NO}\index{MP\_VAL}\index{MP\_MEM}
+\begin{figure}[here!]
+\begin{center}
+\begin{small}
+\begin{tabular}{|l|l|}
+\hline \textbf{Code} & \textbf{Meaning} \\
+\hline MP\_OKAY & The function succeeded. \\
+\hline MP\_VAL  & The function input was invalid. \\
+\hline MP\_MEM  & Heap memory exhausted. \\
+\hline &\\
+\hline MP\_YES  & Response is yes. \\
+\hline MP\_NO   & Response is no. \\
+\hline
+\end{tabular}
+\end{small}
+\end{center}
+\caption{Return Codes}
+\end{figure}
+
+The last two codes listed are not actually ``return'ed'' by a function.  They are placed in an integer (the caller must provide the address of an integer it can store to) which the caller can access.  To convert one of the three return codes to a string use the following function.
+
+\section{Data Types}
+
+To better work with LibTomFloat it helps to know what makes up the primary data type within LibTomFloat.
+
+\begin{alltt}
+typedef struct \{
+     mp_int mantissa;
+     long   radix,
+            exp;
+\} mp_float;
+\end{alltt}
+
+The mp\_float data type is what all LibTomFloat functions will operate with and upon.  The members of the structure are as follows:
+
+\begin{enumerate}
+   \item The \textbf{mantissa} variable is a LibTomMath {\texttt{mp\_int}} that represents the digits of the float. Since it's a mp\_int it can accomodate any practical range of numbers.
+   \item The \textbf{radix} variable is the precision desired for the {\texttt{ mp\_float}} in bits. The higher the value the more precise (and slow) the calculations are.  This value must be larger than two and ideally shouldn't be lower than what a {\texttt{double}} provides (55-bits of mantissa).
+   \item The \textbf{exp} variable is the exponent associated with the number.  
+\end{enumerate}
+
+\section{Function Organization}
+
+Many of the functions operate as their LibTomMath counterparts.  That is the source operands are on the left and the destination is on the 
+right.  For instance:
+
+\begin{alltt}
+mpf_add(&a, &b, &c);       /* c = a + b */
+mpf_mul(&a, &a, &c);       /* c = a * a */
+mpf_div(&a, &b, &c);       /* c = a / b */
+\end{alltt}
+
+One major difference (and similar to LibTomPoly) is that the radix of the destination operation controls the radix of the internal computation and 
+the final result.  For instance, if $a$ and $b$ have a $24$--bit mantissa and $c$ has a $96$--bit mantissa then all three operations are performed
+with $96$--bits of precision.  
+
+This is non--issue for algorithms such as addition or multiplication but more important for the series calculations such as division, inversion, square roots, etc.
+
+All functions normalize the result before returning.  
+
+\section{Initialization}
+\subsection{Single Initializers}
+
+To initialize or clear a single {\texttt{mp\_float}} use the following two functions.
+
+\index{mpf\_init} \index{mpf\_clear}
+\begin{alltt}
+int  mpf_init(mp_float *a, long radix);
+void mpf_clear(mp_float *a);
+\end{alltt}
+
+mpf\_init will initialize $a$ with the given radix to the default value of zero.  {\texttt{mpf\_clear}} will free the memory used by the {\texttt{mp\_float}}.
+
+\begin{alltt}
+int main(void)
+\{
+   mp_float a;
+   int err;
+
+   /* initialize a mp_float with a 96-bit mantissa */
+   if ((err = mpf_init(&a, 96)) != MP_OKAY) \{
+      // error handle
+   \}
+
+   /* we now have a 96-bit mp_float ready ... do work */
+
+   /* done */
+   mpf_clear(&a);
+
+   return EXIT_SUCCESS;
+\}
+\end{alltt}
+
+\subsection{Multiple Initializers}
+
+To initialize or clear multiple {\texttt{mp\_floats}} simultaneously use the following two functions.
+
+\index{mpf\_init\_multi} \index{mpf\_clear\_multi}
+\begin{alltt}
+int  mpf_init_multi(long radix, mp_float *a, ...);
+void mpf_clear_multi(mp_float *a, ...);
+\end{alltt}
+
+{\texttt{mpf\_init\_multi}} will initialize a \textbf{NULL} terminated list of {\texttt{mp\_floats}} with the same given radix.  {\texttt{mpf\_clear\_multi}} will free up a \textbf{NULL} terminated list of {\texttt{mp\_floats}}.
+
+\begin{alltt}
+int main(void)
+\{
+   mp_float a, b;
+   int err;
+
+   /* initialize two mp_floats with a 96-bit mantissa */
+   if ((err = mpf_init_multi(96, &a, &b, NULL)) != MP_OKAY) \{
+      // error handle
+   \}
+
+   /* we now have two 96-bit mp_floats ready ... do work */
+
+   /* done */
+   mpf_clear_multi(&a, &b, NULL);
+
+   return EXIT_SUCCESS;
+\}
+\end{alltt}
+
+\subsection{Initialization of Copies}
+
+In order to initialize an {\texttt{mp\_float}} and make a copy of a source {\texttt{mp\_float}} the following function has been provided.
+
+\index{mpf\_init\_copy}
+\begin{alltt}
+int  mpf_init_copy(mp_float *a, mp_float *b);
+\end{alltt}
+
+This will initialize $b$ and make it a copy of $a$.  
+
+\begin{alltt}
+int main(void)
+\{
+   mp_float a, b;
+   int err;
+
+   /* initialize a mp_float with a 96-bit mantissa */
+   if ((err = mpf_init(&a, 96)) != MP_OKAY) \{
+      // error handle
+   \}
+
+   /* we now have a 96-bit mp_float ready ... do work */
+
+   /* now make our copy */
+   if ((err = mpf_init_copy(&a, &b)) != MP_OKAY) \{
+      // error handle
+   \}
+
+   /* now b is a copy of a */
+
+   /* done */
+   mpf_clear_multi(&a, &b, NULL);
+
+   return EXIT_SUCCESS;
+\}
+\end{alltt}
+
+\section{Data Movement}
+\subsection{Copying}
+In order to copy one {\texttt{mp\_float}} into another {\texttt{mp\_float}} the following function has been provided.
+
+\index{mpf\_copy}
+\begin{alltt}
+int  mpf_copy(mp_float *src, mp_float *dest);
+\end{alltt}
+This will copy the {\texttt{mp\_float}} from $src$ into $dest$.  Note that the final radix of $dest$ will be that of $src$.
+
+\begin{alltt}
+int main(void)
+\{
+   mp_float a, b;
+   int err;
+
+   /* initialize two mp_floats with a 96-bit mantissa */
+   if ((err = mpf_init_multi(96, &a, &b, NULL)) != MP_OKAY) \{
+      // error handle
+   \}
+
+   /* we now have two 96-bit mp_floats ready ... do work */
+
+   /* put a into b */
+   if ((err = mpf_copy(&a, &b)) != MP_OKAY) \{
+      // error handle
+   \}
+   
+   /* done */
+   mpf_clear_multi(&a, &b, NULL);
+
+   return EXIT_SUCCESS;
+\}
+\end{alltt}
+
+\subsection{Exchange}
+
+To exchange the contents of two {\texttt{mp\_float}} data types use this function.
+
+\index{mpf\_exch}
+\begin{alltt}
+void mpf_exch(mp_float *a, mp_float *b);
+\end{alltt}
+
+This will swap the contents of $a$ and $b$.  
+
+\chapter{Basic Operations}
+\section{Normalization}
+Normalization applies rounding modes according the environment set by {\texttt{fenv(3)}}, too.
+{\textbf{Note:}} Only one bit rounding (to infinity) supported yet, the rest needs four guard bits which are not yet implemented.
+\subsection{Simple Normalization}
+Normalization is not required by the user unless they fiddle with the mantissa on their own.  If that's the case you can use this function.
+\index{mpf\_normalize}
+\begin{alltt}
+int  mpf_normalize(mp_float *a);
+\end{alltt}
+This will fix up the mantissa of $a$ such that the leading bit is one (if the number is non--zero).  
+
+\subsection{Normalize to New Radix}
+In order to change the radix of a non--zero number you must call this function.
+
+\index{mpf\_normalize\_to}
+\begin{alltt}
+int  mpf_normalize_to(mp_float *a, long radix);
+\end{alltt}
+This will change the radix of $a$ then normalize it accordingly.
+
+\subsection{Normalize to New Radix of Multiple Instances}
+In order to change the radices of multiple non--zero numbers you must call this function.
+
+\index{mpf\_normalize\_to}
+\begin{alltt}
+int  mpf_normalize_to_multi(long radix, mp_float *a, ...);
+\end{alltt}
+This will change the radices of $a,\ldots$ then normalize them accordingly.
+
+\section{Classification}
+\subsection{fpclassify}
+\subsection{isfinite}
+\subsection{isnormal}
+\subsection{isnan}
+\subsection{issignaling}
+
+\section{Exceptions}
+FE_INEXACT
+    The inexact exception. 
+FE_DIVBYZERO
+    The divide by zero exception. 
+FE_UNDERFLOW
+    The underflow exception. 
+FE_OVERFLOW
+    The overflow exception. 
+FE_INVALID
+    The invalid exception. 
+
+\subsection{feclearexcept}
+\subsection{feraiseexcept}
+\subsection{fetestexcept}
+\subsection{fegetexceptflag}
+\subsection{fesetexceptflag}
+
+\section{Constants}
+
+\subsection{Quick Constants}
+The following are helpers for various numbers.
+
+\index{mpf\_const\_0} \index{mpf\_const\_d} \index{mpf\_const\_ln\_d} \index{mpf\_const\_sqrt\_d} \index{mpf\_const\_inf} \index{mpf\_const\_nan}
+\begin{alltt}
+int  mpf_const_0(mp_float *a);
+int  mpf_const_d(mp_float *a, long d);
+int  mpf_const_ln_d(mp_float *a, long b);
+int  mpf_const_sqrt_d(mp_float *a, long b);
+int  mpf_const_inf(mp_float * a, int sign);
+int  mpf_const_nan(mp_float * a);
+\end{alltt}
+
+{\texttt{mpf\_const\_0}} will set $a$ to a valid representation of zero.  {\texttt{mpf\_const\_d}} will set $a$ to a valid signed representation of $d$.  {\texttt{mpf\_const\_ln\_d}} will set $a$ to the natural logarithm of $b$.  {\texttt{mpf\_const\_sqrt\_d}} will set $a$ to the square root of $b$.
+
+The constant {\texttt{mpf\_const\_inf}} (IEEE-754 sec.~3.4: $\pm \infty$) sets the most significant limb to zero and the exponent to {\texttt{LONG\_MAX}}, The constant {\texttt{mpf\_const\_nan}} (a ) sets the most significant limb to one and the exponent to {\texttt{LONG\_MAX}}. The macros {\texttt{mpf\_isnan}} and {\texttt{mpf\_isinf}} can check for these values.
+
+The next set of constants (fig. \ref{fig:const}) compute the standard constants as defined in {\texttt{math.h}}. The results of the calculation of {\texttt{pi}}, {\texttt{e}}, {\texttt{$\gamma$}}, the square root of 2, and the logarithms get cached.
+\begin{figure}[here]
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline \textbf{Function Name} & \textbf{Value} \\
+{\texttt{mpf\_const\_e}} & $e$ (2.71828182845\ldots)\\
+{\texttt{mpf\_const\_gamma}} & $\gamma$ (0.5772156649\ldots) \\
+{\texttt{mpf\_const\_l2e}} & log$_2(e)$ \\
+{\texttt{mpf\_const\_l10e}} & log$_{10}(e)$ \\
+{\texttt{mpf\_const\_le2}}  & ln$(10)$ \\
+{\texttt{mpf\_const\_le10}}  & ln$(2)$ \\
+{\texttt{mpf\_const\_pi}}  & $\pi$ \\
+{\texttt{mpf\_const\_pi2}}  & $\pi / 2$ \\
+{\texttt{mpf\_const\_pi4}}  & $\pi / 4$ \\
+{\texttt{mpf\_const\_1pi}}  & $1 / \pi$ \\
+{\texttt{mpf\_const\_2pi}}  & $2 / \pi$ \\
+{\texttt{mpf\_const\_2rpi}}  & $2 / \sqrt{\pi}$ \\
+{\texttt{mpf\_const\_r2}}  & ${\sqrt{2}}$ \\
+{\texttt{mpf\_const\_1r2}}  & $1 / {\sqrt{2}}$ \\
+\hline
+\end{tabular}
+\end{center}
+\caption{LibTomFloat Constants.}
+\label{fig:const}
+\end{figure}
+
+All of these functions accept a single input argument. They calculate the constant at run--time using the precision specified in the input argument.
+If memory is sparse of the precision very high the caches of the constants $e$, $\pi$, $\sqrt{2}$, $\gamma$, and some of the logarithms can be emptied by calling the following functions with the argument set to {\textbf{NULL}}
+\begin{itemize}
+\item{{\texttt{mpf\_const\_e}}}
+\item{{\texttt{mpf\_const\_pi}}}
+\item{{\texttt{mpf\_const\_r2}}}
+\item{{\texttt{mpf\_const\_le2}}}
+\item{{\texttt{mpf\_const\_le10}}}
+\item{{\texttt{mpf\_const\_l10e}}}
+\item{{\texttt{mpf\_const\_gamma}}}
+\item{}
+\item{}
+\end{itemize}
+
+$\pi$ is computed by the AGM with the Brent--Salamin (Gauss--Legendre) algorithm
+\cite{borwein1987way,bailey1997quest,brent2006fast}, $e$ is computed with the series accelerated by binary splitting, $\log 2$ with Machin's formula $\log 2  = 18 \atanh\frac{1}{26} - 2\atanh\frac{1}{4801} + 8\atanh\frac{1}{8749}$ (but with $\coth$ instead which is easier accelerated by binary splitting), $log 10$ with Machin's formula $\log 10 =46\atanh\frac{1}{31}+34\atanh\frac{1}{49}+20\atanh\frac{(1}{161}$ (dito with $\coth$ instead for the very same reasons). The coefficients for the Machin's formulae were shamelessly taken from {\url{http://numbers.computation.free.fr/Constants/PiProgram/userconstants.html}}. Euler's constant $\gamma$ gets calculated with the Brent-McMillan algorithm\cite{borwein2004mathematics}.
+
+\begin{alltt}
+int main(void)
+\{
+   mp_float a;
+   int err;
+
+   /* initialize a mp_float with a 96-bit mantissa */
+   if ((err = mpf_init(&a, 96)) != MP_OKAY) \{
+      // error handle
+   \}
+
+   /* let's find out what the square root of 2 is (approximately ;-)) */
+   if ((err = mpf_const_r2(&a)) != MP_OKAY) \{
+      // error handle 
+   \}
+
+   /* now a has sqrt(2) to 96-bits of precision */
+
+   /* done */
+   mpf_clear(&a);
+
+   /* clear cache */
+   err = mpf_const_r2(NULL);
+
+   return EXIT_SUCCESS;
+\}
+\end{alltt}
+\subsection{A not so Constant Constant}
+A very usefull constant is the value EPS, the machine epsilon. It is not dependent on the machine here but on the precision.
+\begin{alltt}
+int  mpf_const_eps(mp_float * a);
+\end{alltt}
+It is the smallest positive value different from zero: $1\cdot^2{-2*r}$ with $r$ the radix.
+
+This constants gets cached, too, and can get cleared with the same method: call teh function with the argument {\textbf{NULL}}.
+
+\section{Sign Manipulation}
+To manipulate the sign of a {\texttt{mp\_float}} use the following two functions.
+
+\index{mpf\_abs} \index{mpf\_neg}
+\begin{alltt}
+int  mpf_abs(mp_float *a, mp_float *b);
+int  mpf_neg(mp_float *a, mp_float *b);
+\end{alltt}
+
+{\texttt{mpf\_abs}} computes the absolute of $a$ and stores it in $b$.  {\texttt{mpf\_neg}} computes the negative of $a$ and stores it in $b$.  Note that the numbers are normalized to the radix of $b$ before being returned.  
+
+\begin{alltt}
+int main(void)
+\{
+   mp_float a;
+   int err;
+
+   /* initialize a mp_float with a 96-bit mantissa */
+   if ((err = mpf_init(&a, 96)) != MP_OKAY) \{
+      // error handle
+   \}
+
+   /* let's find out what the square root of 2 is (approximately ;-)) */
+   if ((err = mpf_const_r2(&a)) != MP_OKAY) \{
+      // error handle 
+   \}
+
+   /* now make it negative */
+   if ((err = mpf_neg(&a, &a)) != MP_OKAY) \{
+      // error handle 
+   \}
+   
+   /* done */
+   mpf_clear(&a);
+
+   return EXIT_SUCCESS;
+\}
+\end{alltt}
+
+\section{Rounding}
+FE_TONEAREST
+
+    Round to nearest.
+FE_UPWARD
+
+    Round toward +&infin;.
+FE_DOWNWARD
+
+    Round toward -&infin;.
+FE_TOWARDZERO
+
+    Round toward zero. 
+
+\subsection{fegetround}
+\subsection{fesetround}
+
+\subsection{{\texttt{floor}}}
+\subsection{{\texttt{ceil}}}
+\subsection{{\texttt{trunc}}}
+\subsection{{\texttt{rint}}}
+\subsection{{\texttt{nearbyint}}}
+\subsection{{\texttt{round}}}
+
+\section{Environment}
+\subsection{fegetenv}
+\subsection{feholdexcept}
+\subsection{fesetenv}
+\subsection{feupdateenv}
+\subsection{}
+
+
+
+\section{Remainder}
+\subsection{{\texttt{fmod}}}
+\subsection{{\texttt{drem}}}
+\subsection{{\texttt{remainder}}}
+
+
+\section{Direct Manipulations of the Number}
+\subsection{Divorce fraction from Exponent {\texttt{frexp}}}
+\subsection{Marry Fraction and Exponent {\texttt{ldexp}}}
+\subsection{Part Number in Fraction and Integer {\texttt{modf}}}
+\subsection{IEEE Compliance {\texttt{significand}}}
+
+\subsection{{\texttt{copysign}}}
+\subsection{{\texttt{signbit}}}
+\subsection{{\texttt{nextafter}}}
+\subsection{{\texttt{nexttoward}}}
+
+\section{Misc.}
+\subsection{{\texttt{min}}}
+\subsection{{\texttt{max}}}
+\subsection{{\texttt{dim}}}
+\subsection{{\texttt{fma}}}
+
+\chapter{Input/Output}
+\section{Input}
+\section{Output}
+
+
+\chapter{Basic Algebra}
+\section{Algebraic Operators}
+
+The following four functions provide basic addition, subtraction, multiplication and division of mp\_float numbers.
+
+\index{mpf\_add} \index{mpf\_sub} \index{mpf\_mul} \index{mpf\_div} 
+\begin{alltt}
+int  mpf_add(mp_float *a, mp_float *b, mp_float *c);
+int  mpf_sub(mp_float *a, mp_float *b, mp_float *c);
+int  mpf_mul(mp_float *a, mp_float *b, mp_float *c);
+int  mpf_div(mp_float *a, mp_float *b, mp_float *c);
+\end{alltt}
+These functions perform their respective operations on $a$ and $b$ and store the result in $c$.
+Division is done by multiplying with the multiplicative inverse. The multiplicative inverse is computed with a quadratic Newton--Raphson algorithm.
+
+{\textbf{Note:}} the calculation of the initial value gets done by converting the {\texttt{mp\_float}} to a double. This can lead to some unexpected consequences! This behaviour is already considered a bug and gets repaired in one of the next versions but I have only two hands, sorry.
+
+\subsection{Additional Interfaces}
+In order to make programming easier with the library the following four functions have been provided as well.
+
+\index{mpf\_add\_d} \index{mpf\_sub\_d} \index{mpf\_mul\_d} \index{mpf\_div\_d} 
+\begin{alltt}
+int  mpf_add_d(mp_float *a, long b, mp_float *c);
+int  mpf_sub_d(mp_float *a, long b, mp_float *c);
+int  mpf_mul_d(mp_float *a, long b, mp_float *c);
+int  mpf_div_d(mp_float *a, long b, mp_float *c);
+\end{alltt}
+These work like the previous four functions except the second argument is a ``long'' type.  This allow operations with mixed {\texttt{mp\_float}} and integer types (specifically constants) to be performed relatively easy.  
+
+\textit{I will put an example of all op/op\_d functions here...}\footnote{Said Tom. I, for one, can only concur.}
+
+\subsection{Additional Operators}
+The next three functions round out the simple algebraic operators.
+
+\index{mpf\_mul\_2} \index{mpf\_div\_2} \index{mpf\_sqr}
+\begin{alltt}
+int  mpf_mul_2(mp_float *a, mp_float *b);
+int  mpf_div_2(mp_float *a, mp_float *b);
+int  mpf_sqr(mp_float *a, mp_float *b);
+\end{alltt}
+
+{\texttt{mpf\_mul\_2}} and {\texttt{mpf\_div\_2}} multiply (or divide) $a$ by two and store it in $b$.  mpf\_sqr squares $a$ and stores it in $b$.  {\texttt{mpf\_sqr}} is
+faster than using {\texttt{mpf\_mul}} for squaring C.
+
+{\textbf{Hint:}} Multiplication and division by multiples of two can be done by manipulting the exponent directly if the cost of copying is found to be too high.
+
+\section{Comparisons}
+To compare two {\texttt{mp\_floats}} the following function can be used.
+\index{mp\_cmp}
+\begin{alltt}
+int  mpf_cmp(mp_float *a,   mp_float *b);
+\end{alltt}
+This will compare $a$ to $b$ and return one of the LibTomMath comparison flags.  Simply put, if $a$ is larger than $b$ it returns {\texttt{MP\_GT}}. If $a$ is smaller than $b$ it returns
+{\texttt{MP\_LT}}, otherwise it returns {\texttt{MP\_EQ}}. The comparison is signed.
+
+The algorithm described in a sentence: if one number is zero (can be tested fast with the macro {\texttt{mp\_iszero}}) compare the sign and return the result, if that didn't help compare the signs, if that is also of no help compare the exponents, and finally, when everything else fails, compare the mantissas which can be costly.
+
+To quickly compare an {\texttt{mp\_float}} to a ``long'' the following is provided.
+
+\index{mpf\_cmp\_d}
+\begin{alltt}
+int  mpf_cmp_d(mp_float *a, long b, int *res);
+\end{alltt}
+
+Which compares $a$ to $b$ and stores the result in $res$.  This function can fail which is unlike the digit compare from LibTomMath.
+
+\subsection{{\texttt{isgreater}}}
+\subsection{{\texttt{isgreaterequal}}}
+\subsection{{\texttt{isless}}}
+\subsection{{\texttt{islessequal}}}
+\subsection{{\texttt{islessgreater}}}
+\subsection{{\texttt{isunordered}}}
+
+
+
+\chapter{Advanced Algebra}
+\section{Powers}
+\subsection{Exponential}
+The following function computes $exp(x)$ otherwise known as $e^x$.
+
+\index{mpf\_exp}
+\begin{alltt}
+int  mpf_exp(mp_float *a, mp_float *b);
+\end{alltt}
+
+This computes $e^a$ and stores it into $b$.
+
+The algorithm in use is the standard series $\sum_{n=0}^{\infty} {\frac{1}{n!}}x^n$ with argument reduction by $\left(\tfrac{1}{2}\right)^m$\cite{arndt2010matters}.
+
+\subsection{Lambert-W}
+The Lambert-W function $W(z)$ is defined as
+\begin{equation}
+z = W(z)e^{W(z)}\quad\text{with } z\in\C
+\end{equation}
+\index{mpf\_lamberw} \index{omega}
+\begin{alltt}
+int  mpf_lambertw(mp_float * a, mp_float * b, int branch)
+\end{alltt}
+
+Only real values are supported in this library, the domain of $W(z)$ is restricted to $z\in\R$, $z \ge -\tfrac{1}{e}$, and the magnitude is restricted (for now) to the magintude of the native {\texttt{double}} data type. The two branches $W_0$ (the principal branch)and $W_{ -1}$ are supported.
+
+The algorithm uses a lot of cut--off points for several different methods to find an initial value for the final Halley iteration. The main source of information was Darko Veberic "Having Fun with Lambert W(x) Function"\cite{veberic2010having} although he proposed Fritsch's iteration\cite{fritsch1973solution} instead of Halley's.
+
+\subsection{Power Operator}
+The following function computes the generic $a^b$ operation.  
+
+\index{mpf\_pow}
+\begin{alltt}
+int  mpf_pow(mp_float *a, mp_float *b, mp_float *c);
+\end{alltt}
+This computes $a^b$ and stores the result in $c$.
+
+The algorithm in use is the simple $a^b = \exp(b\log a)$. It is quite expensive, so for integer exponents the following function is recommended:
+\index{mpf\_pow\_d}
+\begin{alltt}
+int  mpf_pow_d(mp_float * a, long e, mp_float * c)
+\end{alltt}
+This computes $a^e$ and stores the result in $c$. The algorithm is just exponentiation by squaring.
+
+\subsection{Natural Logarithm}
+
+The following function computes the natural logarithm.
+\index{mpf\_ln}
+\begin{alltt}
+int  mpf_ln(mp_float *a, mp_float *b);
+\end{alltt}
+This computes $ln(a)$ and stores the result in $b$.
+
+Two algorithms are in use here: for small precisions and small numbers the series $\log(1+x) = \sum^\infty_{n=1}(-1)^{n+1}\frac{x^n}{n}\quad\text{for } |x| < 1$  with argument reduction by applying the integer $n^{\text{\tiny th}}$--root to the mantissa. The cut--off for the argument reduction is {\texttt{MPF\_LOG\_AGM\_REDUX\_CUTOFF}} and the two cut--offs for the decision if the AGM aglorithms is used instead of the series are named {\texttt{MPF\_LOG\_AGM\_1\_CUTOFF}} (radix only) and  {\texttt{MPF\_LOG\_AGM\_2\_CUTOFF}} (sum of radix and exponent). All such cut--offs are in the file {\texttt{mpf\_global\_variables.c}}
+
+\section{Inversion and Roots}
+
+\subsection{Inverse Square Root}
+The following function computes $1 / \sqrt{x}$.
+
+\index{mpf\_invsqrt}
+\begin{alltt}
+int  mpf_invsqrt(mp_float *a, mp_float *b);
+\end{alltt}
+
+This computes $1 / \sqrt{a}$ and stores the result in $b$.
+
+The algorithm used is the quadratic Newton--Raphson for the inverse square root.
+
+\subsection{Inverse}
+
+The following function computes $1 / x$.
+\index{mpf\_inv}
+\begin{alltt}
+int  mpf_inv(mp_float *a, mp_float *b);
+\end{alltt}
+This computes $1/a$ and stores the result in $b$.
+
+The algorithm used is the quadratic Newton--Raphson one.
+
+{\textbf{Note:}} the calculation of the initial value gets done by converting the {\texttt{mp\_float}} to a double. This can lead to some unexpected consequences! This behaviour is already considered a bug and gets repaired in one of the next versions but I have only two hands, sorry.
+
+\subsection{Square Root}
+
+The following function computes $\sqrt{x}$.
+
+\index{mpf\_sqrt}
+\begin{alltt}
+int  mpf_sqrt(mp_float *a, mp_float *b);
+\end{alltt}
+
+This computes $\sqrt{a}$ and stores the result in $b$.
+
+The algorithm used is the quadratic Newton--Raphson for the inverse square root multiplied by $a$ at the end.
+
+\subsection{$n^{\text{\tiny th}}$--Root}
+\index{mpf\_nroot} 
+\begin{alltt}
+int  mpf_nthroot(mp_float * a, long n, mp_float * b)
+\end{alltt}
+
+This computes $a^\frac{1}{n}$ and stores the result in $b$.
+
+The initial value gets computed for values in the amgintude range of a IEEE-double data type directly and for values outside that range by assuming $n$ is positive and observing that:
+\begin{equation}
+\begin{split}
+x^n& = \exp\left(n\log_e x\right)\\
+   & = 2^{n\log_2 x}
+\end{split}
+\end{equation}
+The {\texttt{mp\_float}} data type works as $f\cdot2^e$ with $f$ the fraction part and $e$ the exponent. Exponentiating it with a positive integer $n$ leads to
+\begin{equation}
+\begin{split}
+(f * 2^e)^n& = 2^{\log_2(f \cdot 2^e) \cdot n}\\
+           & = 2^{ (\log_2(f) + e)  \cdot n}\\
+           & = 2^{ \log_2(f) \cdot n + e \cdot n}
+\end{split}
+\end{equation}
+
+With $\tfrac{1}{n}$ we get
+\begin{equation}
+(f \cdot 2^e)^\frac{1}{n} = 2^{ \frac{\log_2(f) }{ n} + \frac{e}{n}}
+\end{equation}
+Factoring out
+\begin{equation}
+(f \cdot 2^e)^\frac{1}{n}  = f^\frac{1}{n} (2^e)^\frac{1}{n}
+\end{equation}
+
+The fractional part can be done by dividing the base two logarithm by $n$
+\begin{equation}
+f^\frac{1}{n} = 2^(\frac{\log_2 f}{n})
+\end{equation}
+but the fractional part is guaranteed to be between one half and one and, because only small precision is needed for an initial value, can be done directly.
+
+The exponent value reduces to
+\begin{equation}
+\begin{split}
+(2^e)^\frac{1}{n}& = 2^\frac{\log_2(2^e)}{n}\\
+                 & = 2^\frac{e}{n}
+\end{split}
+\end{equation}
+Rounding $\frac{e}{n}$ to the nearest integer gives a result usable as the exponent.
+
+
+\section{Trigonometry Functions}
+The following functions compute various trigonometric functions.  All inputs are assumed to be in radians.
+
+\index{mpf\_cos} \index{mpf\_sin} \index{mpf\_tan} \index{mpf\_acos} \index{mpf\_asin} \index{mpf\_atan} 
+\begin{alltt}
+int  mpf_cos(mp_float *a, mp_float *b);
+int  mpf_sin(mp_float *a, mp_float *b);
+int  mpf_tan(mp_float *a, mp_float *b);
+
+int  mpf_sinh(mp_float * a, mp_float * b);
+int  mpf_cosh(mp_float * a, mp_float * b);
+int  mpf_tanh(mp_float * a, mp_float * b);
+
+int  mpf_acos(mp_float *a, mp_float *b);
+int  mpf_asin(mp_float *a, mp_float *b);
+int  mpf_atan(mp_float *a, mp_float *b);
+int  mpf_atan2(mp_float * a, mp_float * b, mp_float *c);
+
+int mpf_atanh(mp_float * a, mp_float * b);
+int mpf_asinh(mp_float * a, mp_float * b);
+int mpf_acosh(mp_float * a, mp_float * b);
+\end{alltt}
+
+These all compute their respective trigonometric function on $a$ and store the result in $b$ with teh exception of the {\texttt{atan2}} function which computes $\atan\frac{a}{b}$ and stores the result in $c$.
+
+\subsection{Algorithm for $\sin$, $\cos$, $\tan$, and their Hyperbolic Variants}
+The series for $\sin$, $\cos$, and their hyperbolic variants are highly related and can be computed in one loop with only a handfull of branches.
+\begin{align}
+\sin x& = \sum^{\infty}_{n=0} \frac{(-1)^n}{(2n+1)!} x^{2n+1}\\
+\sinh x = \sum^{\infty}_{n=0} \frac{x^{2n+1}}{(2n+1)!}\\
+\cos x& = \sum^{\infty}_{n=0} \frac{(-1)^n}{(2n)!} x^{2n}\\
+\cosh x = \sum^{\infty}_{n=0} \frac{x^{2n}}{(2n)!}\\
+\tan x& = \sum^{\infty}_{n=1} \frac{B_{2n} (-4)^n (1-4^n)}{(2n)!} x^{2n-1}\quad\text{for } |x| < \frac{\pi}{2} \\
+\tanh x& = \sum^{\infty}_{n=1} \frac{B_{2n} 4^n (4^n-1)}{(2n)!} x^{2n-1}\quad\text{for } |x| < \frac{\pi}{2}
+\end{align}
+The occurance of the Bernoulli numbers can be safely ignored because of
+\begin{align}
+\tanh x& = \frac{\sin x}{\cos x}\\
+\tanh x& = \frac{\sinh x}{\cosh x}
+\end{align}
+
+\begin{alltt}
+int  mpf_sincos(mp_float * a, mp_float * b, int cosine, int tan, int hyper);
+\end{alltt}
+It is an internal function for a good reason: it needs its arguments reduced to $x \le \frac{\pi}{4}$ for reasonable converging rates. The reduction gets done by the function
+\begin{alltt}
+int  mpf_trig_arg_reduct(mp_float * a, mp_float * b, int *k);
+\end{alltt}
+It is based on the work of K. C. Ng and the members of the FP group of SunPro\cite{ng1992argument}.
+
+\subsection{Algorithm for $\atan$}
+The series for $\atan$ and $\atanh$ are the very same safe the signs.
+\begin{align}
+\atan z& = \sum_{n=0}^\infty \frac{(-1)^n z^{2n+1}}{2n+1}\\
+\atanh z& = \sum_{n=0}^\infty \frac{ z^{2n+1}}{2n+1}
+\end{align}
+By computing the even and odd coefficents separately we can easily get both functions out of the same loop by just adding or subtracting the partial sums. This series is implemented in the function
+\begin{alltt}
+int  mpf_kernel_atan(mp_float * a, mp_float * b, int hyper);
+\end{alltt}
+For more information see "Modern Computer Arithmetic" by Richard Brent and Paul Zimmermann\cite{brent2010modern}. The implementation here is simple and straightforward and has some room for algorithmical optimizations, e.g.: binary splitting for large precisions.
+
+The series does not converge very well if the argument is far from zero, it needs some reduction. This reduction gets done in the function itself by the rules
+\begin{align}
+\atan x& = \frac{\pi}{2} - atan\left(\frac{1}{x}\right)\quad\text{for } x > 0 \AND |x| > 1\\
+\atan x& = -\left(frac{\pi}{2} + \atan\left(\frac{1}{x}\right)\right) \quad\text{for } x > 0 \AND |x| > 1\\
+\atan x& = \atan(1) + \atan \frac{t-1}{1+t}\quad\text{for } |x| < 1
+\end{align}
+The cut--off for $x$ if $|x| < 1$ is about $0.5$ and together with the fixed values
+\begin{align}
+\atan -1& = - \frac{\pi}{4}\\
+\atan 1& = \frac{\pi}{4}\\
+\atan 0& = 0\\
+\atan \infty& = \frac{\pi}{2}
+\end{align}
+it is easy to do the reduction.
+
+\subsection{Algorithm for $\asin$ and $\acos$}
+The algorithms for $\asin$ and $\acos$ use the relations
+\begin{align}
+\asin x& = 2 \atan \frac{x}{1 + \sqrt{1 -x^2} }\\
+\acos x& = 2 \atan \frac{\sqrt{1 -x^2} }{1 + x }
+\end{align}
+
+\subsection{Algorithm for $\atan2$}
+Does currently just $\atan2 \left (a,b\right) = \atan \frac{a}{b} $, the long list of exceptions from IEEE-754 is not yet implemented.
+
+
+\subsection{Algorithm for $\asinh$}
+This seemed to be the fastest way, regarding run--time and time to implement it.
+\begin{equation}
+\asinh x = \log \left(x + \sqrt{x^2 + 1} \right)
+\end{equation}
+\subsection{Algorithm for $\acosh$}
+This seemed to be the fastest way, regarding run--time and time to implement it.
+\begin{equation}
+\acosh x = \log \left(x + \sqrt{x^2 - 1} \right)\quad\text{for } x \ge 1
+\end{equation}
+\subsection{Algorithm for $\atanh$}
+This seemed to be the fastest way, regarding run--time and time to implement it.
+\begin{equation}
+\atanh x = \frac{1}{2}\log \left( \frac{1 + x}{1 - x} \right)\quad\text{for } |x| < 1
+\end{equation}
+
+\chapter{Special Functions}
+Special functions are funtions that are different from elementary function but that is---elementary.
+\section{Gamma functions}
+The Gamma--function:
+\begin{equation}
+\Gamma(t) = \int_0^\infty  x^{t-1} e^{-x}\,\D x
+\end{equation}
+The current implementation is with Spouge's algorithm\cite{spouge1994computation}. Not the fastest one (it needs a lot of extra precision) but the coefficients can be computed easily and especially without the need of Bernoulli numbers. The implementation of this algorithm is quite simple, the most difficult thing is to approximate the needed extra precision as acurate as possible to compute the coefficients as exact as possible but not more, it is expensive. The way I did it is to add some angst--allowance to the radix (one limb), compute the number of decimal digits and compute $A$ by multiplying Spouge's magic constant\footnote{actually just the error term approximated to  $\frac{\log 10}{\log 2\pi}$}$1.25285044\ldots$ with the result. The precision needed gets then calculated with $e_n = e_o + A * 1.44$ where $e_n$ is the new precision (value for the radix), $e_o$ the original precision and the magic number $1.44$ comes from the largest coefficient if you approximate it with $exp(a)$ which is about $2^{1.44 a}$ to get a number usable for the radix. The actually largest coefficient $c_k$ is at about $k = \tfrac{a}{4}$, approximately $exp(a + \tfrac{a}{4})$ which is about $2^{1.81 a}$. Such a high value would make this already slow function (with a cold cache at least) even slower. A proper analysis of the envelope curve would be necessary.
+
+\subsection{Gamma function}
+\begin{alltt}
+int  mpf_gamma(mp_float * a, mp_float * b)
+\end{alltt}
+\subsection{Logarithm of the Gamma function}
+No direct implementation, just $exp\left(\log\left(\Gamma x\right)\right)$
+\begin{alltt}
+int  mpf_lngamma(mp_float * a, mp_float * b)
+\end{alltt}
+\subsection{Helpers for Spouge's Algorithm}
+\begin{alltt}
+void mpf_clear_spougecache();
+void mpf_dump_spougecache();
+\end{alltt}
+
+\section{Error Functions}
+\subsection{Error function {\texttt{erf}}}
+\subsection{Complementary Error function {\texttt{erfc}}}
+
+\section{Bessel Functions}
+\subsection{First Kind of Order 0 {\texttt{j0}}}
+\subsection{First Kind of Order 1 {\texttt{j1}}}
+\subsection{First Kind of Order n {\texttt{jn}}}
+\subsection{Second Kind of Order 0 {\texttt{y0}}}
+\subsection{Second Kind of Order 1 {\texttt{y1}}}
+\subsection{Second Kind of Order n {\texttt{yn}}}
+
+\input{float_new.ind}
+\bibliographystyle{plain}
+\bibliography{bibfloat}
+\end{document}
