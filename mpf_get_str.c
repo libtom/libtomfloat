@@ -12,11 +12,11 @@ int mpf_get_str(mp_float * a, char **str, int base)
     mp_float ret2, ten2, anew, log10,loga;
     int err, digits, tmpdigits;
     int decprec, decexpo;
-    int sign;
+    int sign, signbit;
     char *tmp, *s;
     size_t len, offset;
     long eps;
-    //double d;
+    double d;
     // rounding bit
     mp_digit c;
 
@@ -66,15 +66,17 @@ int mpf_get_str(mp_float * a, char **str, int base)
 
     // it must be an integer
     if (a->exp >= 0) {
-	// TODO: bases 2 and 16 can be done with shifting instead
+	// TODO: implement the other two bases
 	if ((err = mp_mul_2d(&ret, (int) a->exp, &ret)) != MP_OKAY) {
 	    mp_clear(&ret);
 	    return err;
 	}
 
         mp_radix_size(&ret,10,&digits);
+	decexpo = digits - 2;
+// TODO: log is fast enough now, use it
 /*
-        mpf_const_ln_d(&log10, 10L);
+        mpf_const_le10(&log10);
         mpf_ln(&anew,&loga);
         mpf_div(&loga,&log10,&loga);
         mpf_floor(&loga,&loga);
@@ -83,7 +85,7 @@ int mpf_get_str(mp_float * a, char **str, int base)
         digits = (int)(d);
 	decexpo = digits;
 */
-	decexpo = digits - 2;
+
 
 	if ((err = mpf_init(&ret2, eps)) != MP_OKAY) {
 	    mp_clear(&ret);
@@ -334,23 +336,20 @@ int mpf_get_str(mp_float * a, char **str, int base)
 	    free(str);
 	    return err;
 	}
-        // That's why this function works with base 10 only
-        // On the other side we have:
-        // int mp_radix_size (mp_int * a, int radix, int *size)
-        // It returns the size according to the base but does it by
-        // actually doing the conversion which makes it costly.
-	//digits =  (int) strlen(*str);
-        mp_radix_size(&ret,10,&digits);
-        digits--;
-printf("digits = %d, strlen = %d, decprec = %d, decexpo = %d\n", digits, (int)strlen(*str), decprec, decexpo);
-	if (sign == MP_NEG) {
-	    digits--;
-	}
-	if (digits > decprec) {
-	    decexpo = decprec - decexpo;
-	} else {
-	    decexpo = decprec - decexpo - 1;
-	}
+        // TODO: implement the other two bases
+        mpf_const_le10(&log10);
+        mpf_ln(&anew,&loga);
+        mpf_div(&loga,&log10,&loga);
+        signbit = mpf_signbit(&loga);
+        mpf_set_double(&loga, &d);
+        d = fabs(d);
+	// round away from zero
+        if(signbit == MP_NEG){
+          digits = -ceil(d);
+        } else {
+          digits = floor(d);
+        }
+	decexpo = digits;
 	if (base == 10) {
 	    if (sign == MP_NEG) {
 		*((*str) + decprec + 1) = '\0';
