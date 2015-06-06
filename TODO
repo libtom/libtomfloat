@@ -1,37 +1,44 @@
-Still quite a bit todo for LibTomFloat.
+"Still quite a bit todo for LibTomFloat."
 
-1. The following functions [as of v0.01] have not been implemented (the .C files are present but not populated)
+Yes, Tom, that's right.
 
-   - mpf_acos
-   - mpf_asin
-   - mpf_atan
-   - mpf_const_1pi    [*]
-   - mpf_const_2pi    [*]
-   - mpf_const_2rpi   [*]
-   - mpf_const_l10e   [*]
-   - mpf_const_l2e    [*]
-   - mpf_const_le2    [*]
-   - mpf_const_pi     [*]
-   - mpf_const_pi2    [*]
-   - mpf_const_pi4    [*]
-   - mpf_ln
-   - mpf_pow          [*]
-   - Any form of string input/output 
+Besides the obligatory check for correctness, which is always number zero
+in every TODO list, the following points are the more acute ones.
 
-[*] Denotes functions which are written but depend upon incomplete functions to work.
+1. Rounding is incomplete. It needs the implementation of 4 (four) guard bits
+   to do the following rounding modes from the C-standard (or more if time
+   allows)
+   a. FE_TONEAREST  Round to nearest.
+   b. FE_UPWARD     Round toward +infinity
+   c. FE_DOWNWARD   Round toward -infinity
+   d. FE_TOWARDZERO Round toward zero.
 
-The critical path lies in two functions.  The first is mpf_ln from which I can write mpf_pow and the various constants will function.  
-The second is mpf_atan from which I can write mpf_const_pi and finish off the missing constants.
+2. The code for printing strings is an unholy mess.
+   a. The whole thing is an unholy mess.
 
-From there it's a matter of adding mpf_asin, mpf_acos and mpf_tan and I have a decent subset of math in there.
+3. The domain for the Lambert-W function is restricted to the magnitude of a
+   64-bit double. Expanding it is a lot of work.
+   a. check all the rest, it might not be the only one with a domain
+      restriction.
 
-2.  Once all of the functions have been written I want to add early-out optimizations to the various series calculations.  Right now
-they use an arbitrary high count and get accurate results.  However, quite a few functions stabalize quickly and do not need so many
-iterations.  In particular I plan to start on mpf_invsqrt() as it forms the basis of mpf_inv() which is used in mpf_cos() [and other trigs].
+4. Some of the functions from Posix need implementation. See documentation in
+   the file float_new.tex or float_new.pdf respectively and look for empty
+   sections. Most of them are just needful things, the others are the special
+   functions: the Error and Bessel functions.
+   a. Gamma function is implemented with Spouge's algorithm which is a bit
+      slow but simple. Check if using Stirling's series directly is faster
+      with real input.
+   b. Implement other useful functions?
 
-    At the same time I want to add more domain checking (e.g. valid inputs).  
+5. Not everything is thread- and/or async-safe but it needs to be (thread-safe
+   at least)!
 
-3.  Add decent string input/output
+6. Complex numbers?
+
+7. Some of the functions depend on functions in LibTomMath that are not in the
+   official version (yet?). These need to get out if possible.
+
+Points taken from the old TODO (enumeration is from the old TODO, too):
 
 4.  More things to the manual.  I plan on doing this with every release cycle though.
 
