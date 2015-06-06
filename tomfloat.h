@@ -111,6 +111,15 @@ int  mpf_div_d(mp_float *a, long b, mp_float *c);      /* c = a / b    */
 /* compares */
 int  mpf_cmp(mp_float *a,   mp_float *b);
 int  mpf_cmp_d(mp_float *a, long b, int *res);
+
+/* some useful macros */
+
+/* "signbit" as in the C-Standard (and Posix) */
+#define mpf_signbit(a) \
+( \
+  (a)->mantissa.sign \
+)
+
 #define mpf_iszero(a) mp_iszero(&((a)->mantissa))
 
 #define mpf_isnan(a) \
