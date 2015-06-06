@@ -1,0 +1,38 @@
+Still quite a bit todo for LibTomFloat.
+
+1. The following functions [as of v0.01] have not been implemented (the .C files are present but not populated)
+
+   - mpf_acos
+   - mpf_asin
+   - mpf_atan
+   - mpf_const_1pi    [*]
+   - mpf_const_2pi    [*]
+   - mpf_const_2rpi   [*]
+   - mpf_const_l10e   [*]
+   - mpf_const_l2e    [*]
+   - mpf_const_le2    [*]
+   - mpf_const_pi     [*]
+   - mpf_const_pi2    [*]
+   - mpf_const_pi4    [*]
+   - mpf_ln
+   - mpf_pow          [*]
+   - Any form of string input/output 
+
+[*] Denotes functions which are written but depend upon incomplete functions to work.
+
+The critical path lies in two functions.  The first is mpf_ln from which I can write mpf_pow and the various constants will function.  
+The second is mpf_atan from which I can write mpf_const_pi and finish off the missing constants.
+
+From there it's a matter of adding mpf_asin, mpf_acos and mpf_tan and I have a decent subset of math in there.
+
+2.  Once all of the functions have been written I want to add early-out optimizations to the various series calculations.  Right now
+they use an arbitrary high count and get accurate results.  However, quite a few functions stabalize quickly and do not need so many
+iterations.  In particular I plan to start on mpf_invsqrt() as it forms the basis of mpf_inv() which is used in mpf_cos() [and other trigs].
+
+    At the same time I want to add more domain checking (e.g. valid inputs).  
+
+3.  Add decent string input/output
+
+4.  More things to the manual.  I plan on doing this with every release cycle though.
+
+5.  MSVC makefile
