@@ -6,7 +6,7 @@ int mpf_nthroot(mp_float * a, long n, mp_float * b)
     mp_float ret;
     mp_float frac;
     long oldeps, nm1, loops, expnt;
-    double d;
+    double d,rest;
 
     // TODO: IEEE-754 has a quite complicated system here, adapt
     if (mpf_iszero(a)) {
@@ -97,7 +97,7 @@ int mpf_nthroot(mp_float * a, long n, mp_float * b)
     if ((err = mpf_init_copy(a, &ret)) != MP_OKAY) {
 	return err;
     }
-    if ((err = mpf_normalize_to(&ret, oldeps + 10)) != MP_OKAY) {
+    if ((err = mpf_normalize_to(&ret, oldeps + MP_DIGIT_BIT)) != MP_OKAY) {
         mpf_clear(&ret);
 	return err;
     }
@@ -123,12 +123,13 @@ int mpf_nthroot(mp_float * a, long n, mp_float * b)
      * 
      * (f * 2^e)^(1/n)  = f^(1/n) * (2^e)^(1/n)
      * 
-     * f^(1/n) = 2^(log_2(f)/n) but we can do that directly
+     * f^(1/n) = 2^(log_2(f)/n)
      * 
      * (2^e)^(1/n) = 2^( log_2(2^e)/n )
-     *             = 2^(e / n)  which can be used as the exponent directly
-     * 
-     * 
+     *             = 2^(e / n)
+     * We need an integer for the exponent so we use the integer
+     * part for the big exponent and add the small fractional part f
+     * the big fractional part F by doing F*2^f
      */
     if (mpf_isdouble(a)) {
 	if ((err = mpf_init(&t2, ret.radix)) != MP_OKAY) {
@@ -165,14 +166,19 @@ int mpf_nthroot(mp_float * a, long n, mp_float * b)
             mpf_clear_multi(&ret,&t2,&frac,NULL);
 	    return err;
 	}
-	// round(e / n): here lies the inexactitude
-	expnt = round(expnt / ((double) (n)));
+	
 	if ((err = mpf_set_double(&frac, &d)) != MP_OKAY) {
             mpf_clear_multi(&ret,&t2,&frac,NULL);
 	    return err;
 	}
 	// (f) ^(1/n) 
 	d = pow(d, 1.0 / n);
+        // integer part floor(e/n)
+	expnt = expnt / n;
+        // add the fractional part {e/n}
+        rest = ((double)(expnt)) / ((double)(n)) ;
+        rest = pow(2,rest);
+        d *= rest;
 	if ((err = mpf_get_double(d, &frac)) != MP_OKAY) {
             mpf_clear_multi(&ret,&t2,&frac,NULL);
 	    return err;
@@ -199,7 +205,7 @@ int mpf_nthroot(mp_float * a, long n, mp_float * b)
     }
     nm1 = n - 1;
     // safe guard for the worst case
-    loops = ret.radix + 1;
+    loops = ret.radix;
     if ((err = mpf_init_multi(ret.radix, &t3, &x0, NULL)) != MP_OKAY) {
         mpf_clear_multi(&ret,&t2,&frac,&invb,NULL);
 	return err;
@@ -233,8 +239,8 @@ int mpf_nthroot(mp_float * a, long n, mp_float * b)
 	    break;
 	}
 	if (loops-- == 0) {
-	    fprintf(stderr, "mp_float nthroot did not converge in %ld rounds\n",
-		    (ret.radix + 1));
+	    fprintf(stderr, "mp_float nthroot did not converge in some %ld rounds\n",
+		    (ret.radix));
 	    err = MP_VAL;
 	    goto _ERR;
 	}
