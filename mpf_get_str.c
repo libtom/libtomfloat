@@ -34,12 +34,14 @@ int mpf_get_str(mp_float * a, char **str, int base)
 {
   mp_int ret, ten;
   mp_float ret2, ten2, anew, log10, loga;
+  mp_digit grs;
   int err, digits, tmpdigits;
   int decprec, decexpo;
   int sign, signbit;
+  int rlen;
   char *tmp, *s;
   size_t len, offset;
-  long eps;
+  long eps, move;
   double d;
   // rounding bit
   mp_digit c;
@@ -61,9 +63,7 @@ int mpf_get_str(mp_float * a, char **str, int base)
     goto print_zero;
   }
 
-  if ((err = mp_init_copy(&ret, &a->mantissa)) != MP_OKAY) {
-    return err;
-  }
+
   if ((err = mpf_init_copy(a, &anew)) != MP_OKAY) {
     mp_clear(&ret);
     return err;
@@ -80,9 +80,8 @@ int mpf_get_str(mp_float * a, char **str, int base)
   }
 
 
-  if (ret.sign == MP_NEG) {
+  if ((&a->mantissa)->sign == MP_NEG) {
     sign = MP_NEG;
-    ret.sign = MP_ZPOS;
     anew.mantissa.sign = MP_ZPOS;
   } else {
     sign = MP_ZPOS;
@@ -91,17 +90,45 @@ int mpf_get_str(mp_float * a, char **str, int base)
 
   // it must be an integer
   if (a->exp >= 0) {
+    if ((err = mp_init_copy(&ret, &a->mantissa)) != MP_OKAY) {
+      mp_clear(&ret);
+      mpf_clear_multi(&anew,&loga,&log10,NULL);
+      return err;
+    }
+    ret.sign = MP_ZPOS;
+
     // TODO: implement the other two bases
     if ((err = mp_mul_2d(&ret, (int) a->exp, &ret)) != MP_OKAY) {
       mp_clear(&ret);
+      mpf_clear_multi(&anew,&loga,&log10,NULL);
       return err;
     }
 
-    mpf_const_le10(&log10);
-    mpf_ln(&anew, &loga);
-    mpf_div(&loga, &log10, &loga);
-    mpf_floor(&loga, &loga);
-    mpf_set_double(&loga, &d);
+    if( (err = mpf_const_le10(&log10) ) != MP_OKAY){
+      mp_clear(&ret);
+      mpf_clear_multi(&anew,&loga,&log10,NULL);
+      return err;
+    }
+    if( (err = mpf_ln(&anew, &loga) ) != MP_OKAY){
+      mp_clear(&ret);
+      mpf_clear_multi(&anew,&loga,&log10,NULL);
+      return err;
+    }
+    if( (err = mpf_div(&loga, &log10, &loga) ) != MP_OKAY){
+      mp_clear(&ret);
+      mpf_clear_multi(&anew,&loga,&log10,NULL);
+      return err;
+    }
+    if( (err = mpf_floor(&loga, &loga) ) != MP_OKAY){
+      mp_clear(&ret);
+      mpf_clear_multi(&anew,&loga,&log10,NULL);
+      return err;
+    }
+    if( (err = mpf_set_double(&loga, &d) ) != MP_OKAY){
+      mp_clear(&ret);
+      mpf_clear_multi(&anew,&loga,&log10,NULL);
+      return err;
+    }
     // exponent is always in base ten
     digits = (int) (d);
     decexpo = digits;
@@ -153,13 +180,22 @@ int mpf_get_str(mp_float * a, char **str, int base)
 	mpf_clear_multi(&ret2, &ten2, NULL);
 	return err;
       }
-      // TODO: rounding may have added a bit
+      // TODO round according to fenv
       if (c != 0) {
+        rlen = mp_count_bits(&ret2.mantissa);
 	if ((err = mp_add_d(&ret2.mantissa, 1, &ret2.mantissa)) != MP_OKAY) {
 	  mp_clear(&ret);
 	  mpf_clear_multi(&ret2, &ten2, NULL);
 	  return err;
 	}
+        // rounding may have added one bit
+        if(rlen < mp_count_bits(&ret)){
+          if( (err = mp_div_2(&ret,&ret) ) != MP_OKAY){
+            mp_clear(&ret);
+	    mpf_clear_multi(&ret2, &ten2, NULL);
+            return err;
+          }
+        }
       }
     } else {
       if ((err =
@@ -201,9 +237,110 @@ int mpf_get_str(mp_float * a, char **str, int base)
 
   } else {
     // it is not necessarily an integer
+    if ((err = mp_init_copy(&ret, &anew.mantissa)) != MP_OKAY) {
+      mpf_clear_multi(&anew,&loga,&log10,NULL);
+      return err;
+    }
+    ret.sign = MP_ZPOS;
     decexpo = mpf_getdecimalexponent(a->exp);
-
     tmpdigits = get_mp_digits(&ret, base) + 5;
+
+    // TODO: implement the other two bases
+    if( (err = mpf_const_le10(&log10) ) != MP_OKAY){
+      mp_clear(&ret);
+      mpf_clear_multi(&anew,&loga,&log10,NULL);
+      return err;
+    }
+    if( (err = mpf_ln(&anew, &loga) ) != MP_OKAY){
+      mp_clear(&ret);
+      mpf_clear_multi(&anew,&loga,&log10,NULL);
+      return err;
+    }
+    if( (err = mpf_div(&loga, &log10, &loga) ) != MP_OKAY){
+      mp_clear(&ret);
+      mpf_clear_multi(&anew,&loga,&log10,NULL);
+      return err;
+    }
+    signbit = mpf_signbit(&loga);
+    if( (err = mpf_set_double(&loga, &d) ) != MP_OKAY){
+      mp_clear(&ret);
+      mpf_clear_multi(&anew,&loga,&log10,NULL);
+      return err;
+    }
+    d = fabs(d);
+    
+    digits = (int) (d);
+    decexpo = digits;
+
+    if( (err = mp_init_set_int(&ten,10L) ) != MP_OKAY){
+      mp_clear(&ret);
+      mpf_clear_multi(&anew,&loga,&log10,NULL);
+      return err;
+    }
+    if( (err = mp_expt_d(&ten,digits + decprec,&ten) ) != MP_OKAY){
+      mp_clear_multi(&ret,&ten,NULL);
+      mpf_clear_multi(&anew,&loga,&log10,NULL);
+      return err;
+    }
+    if( (err = mp_mul(&ret,&ten,&ret) ) != MP_OKAY){
+      mp_clear_multi(&ret,&ten,NULL);
+      mpf_clear_multi(&anew,&loga,&log10,NULL);
+      return err;
+    }
+
+    mp_clear(&ten);
+
+    // TODO: round according to fenv!
+    move = -((&anew)->exp);
+    // We need at least four bits for rounding. The simplest thing is
+    // to shift "ret" for "move - 4" first to get the bits.
+    if( (err = mp_div_2d(&ret,move - 4,&ret,NULL) ) != MP_OKAY){
+      mp_clear(&ret);
+      mpf_clear_multi(&anew,&loga,&log10,NULL);
+      return err;
+    }
+    // get LSL (last significant limb) and the last 4 bits of it
+    grs = ret.dp[0] & 0xF;
+    // round nearest to even
+    /*
+                     decimal
+        x0xx down       -       
+        1100 up        12
+        0100 down       4
+        x101 up         5
+        x110 up         6
+        x111 up         7
+    */
+    //    0100  ||      x0xx
+    if(grs == 4 || ((grs>>2)&1) == 0){
+      // just truncate
+      if( (err = mp_div_2d(&ret,4,&ret,NULL) ) != MP_OKAY){
+        mp_clear(&ret);
+        mpf_clear_multi(&anew,&loga,&log10,NULL);
+        return err;
+      }
+    } else {
+      // adding might carry, save length
+      rlen = mp_count_bits(&ret);
+      if( (err = mp_add_d(&ret, 4, &ret) ) != MP_OKAY){
+        mp_clear(&ret);
+        mpf_clear_multi(&anew,&loga,&log10,NULL);
+        return err;
+      }
+      if(rlen < mp_count_bits(&ret)){
+        if( (err = mp_div_2d(&ret,3,&ret,NULL) ) != MP_OKAY){
+          mp_clear(&ret);
+          mpf_clear_multi(&anew,&loga,&log10,NULL);
+          return err;
+        }
+      } else {
+        if( (err = mp_div_2d(&ret,4,&ret,NULL) ) != MP_OKAY){
+          mp_clear(&ret);
+          mpf_clear_multi(&anew,&loga,&log10,NULL);
+          return err;
+        }
+      }
+    }
 
     // digits in ret + sign + expo.-mark + expo + angst-allowance = 50
     *str = malloc((tmpdigits + 50) * sizeof(char));
@@ -221,13 +358,7 @@ int mpf_get_str(mp_float * a, char **str, int base)
       free(str);
       return err;
     }
-    // TODO: implement the other two bases
-    mpf_const_le10(&log10);
-    mpf_ln(&anew, &loga);
-    mpf_div(&loga, &log10, &loga);
-    signbit = mpf_signbit(&loga);
-    mpf_set_double(&loga, &d);
-    d = fabs(d);
+
     // round away from zero
     if (signbit == MP_NEG) {
       digits = -ceil(d);
