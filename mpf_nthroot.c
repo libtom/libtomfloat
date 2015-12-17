@@ -176,7 +176,7 @@ int mpf_nthroot(mp_float * a, long n, mp_float * b)
         // integer part floor(e/n)
 	expnt = expnt / n;
         // add the fractional part {e/n}
-        rest = ((double)(expnt)) / ((double)(n)) ;
+        rest = ((double)(expnt)) / ((double)(n)) - expnt;
         rest = pow(2,rest);
         d *= rest;
 	if ((err = mpf_get_double(d, &frac)) != MP_OKAY) {
