@@ -189,6 +189,12 @@ int mpf_nthroot(mp_float * a, long n, mp_float * b)
             mpf_clear_multi(&ret,&t2,&frac,NULL);
 	    return err;
 	}
+        if (d > 1){
+            if( (err = mpf_normalize(&t2) ) != MP_OKAY){
+                mpf_clear_multi(&ret,&t2,&frac,NULL);
+	        return err;
+            }
+        }
     }
     // we should have a good enough initial value in t2 now.
     if ((err = mpf_init(&invb, ret.radix)) != MP_OKAY) {
