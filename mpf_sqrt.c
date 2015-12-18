@@ -195,6 +195,19 @@ int mpf_sqrt(mp_float * a, mp_float * b)
     oldeps = a->radix;
     starteps = 2 * MP_DIGIT_BIT;
     maxeps = oldeps + MP_DIGIT_BIT;
+    // Limits are experimental values only. For now.
+    // There is no obvious reason for that high need, so
+    // it's most probably a bug elsewhere.
+    if (oldeps > 400000 && oldeps <= 650000 ) {
+       maxeps = maxeps + maxeps/2;
+    }
+    else if (oldeps > 650000&& oldeps <= 800000) {
+       maxeps = 2*maxeps;
+    }
+    else {
+       // is enough for ca. 3.32 mio. bits (ca. 1 mio. dec. digits) and prob. more
+       maxeps = 4 * maxeps;
+    }
     err = MP_OKAY;
 
     if ((err =
@@ -212,11 +225,9 @@ int mpf_sqrt(mp_float * a, mp_float * b)
 	goto _ERR;
     }
 
-    xn.exp -= (xn.exp + xn.radix) / 2 - 1;
+    xn.exp -= (xn.exp + xn.radix) / 2  - 1;
 
-    if ((err = mpf_inv(&xn, &xn)) != MP_OKAY) {
-	goto _ERR;
-    }
+    if ((err = mpf_inv(&xn, &xn)) != MP_OKAY) {	goto _ERR;    }
 
     if ((err = mpf_const_d(&one, 1L)) != MP_OKAY) {
 	goto _ERR;
@@ -254,9 +265,9 @@ int mpf_sqrt(mp_float * a, mp_float * b)
 	if ((err = mpf_copy(a, &A)) != MP_OKAY) {
 	    goto _ERR;
 	}
-    if ((err = mpf_normalize_to(&A, starteps)) != MP_OKAY) {
-	goto _ERR;
-    }
+        if ((err = mpf_normalize_to(&A, starteps)) != MP_OKAY) {
+	    goto _ERR;
+        }
 	if ((err = mpf_mul(&A, &hn, &hn)) != MP_OKAY) {
 	    goto _ERR;
 	}
@@ -265,6 +276,7 @@ int mpf_sqrt(mp_float * a, mp_float * b)
 	}
 	sign = hn.mantissa.sign;
 	hn.mantissa.sign = MP_ZPOS;
+
 	// It makes more sense to compare after that limit is reached
 	if (hn.exp <= EPS.exp) {
 	    if (mpf_cmp(&hn, &EPS) != MP_GT) {
@@ -290,12 +302,15 @@ int mpf_sqrt(mp_float * a, mp_float * b)
 	}
 
     } while (mpf_cmp(&x0, &xn) != MP_EQ);
+    // TODO: renormalize here if maxeps is very large
+    //if ((err = mpf_normalize_to(&xn, oldeps + MP_DIGIT_BIT)) != MP_OKAY) {	goto _ERR;    }
+    //if ((err = mpf_normalize_to(&A, oldeps + MP_DIGIT_BIT)) != MP_OKAY) {	goto _ERR;    }
+
     if ((err = mpf_mul(&A, &xn, &xn)) != MP_OKAY) {
 	goto _ERR;
     }
-    if ((err = mpf_normalize_to(&xn, oldeps)) != MP_OKAY) {
-	goto _ERR;
-    }
+    if ((err = mpf_normalize_to(&xn, oldeps)) != MP_OKAY) {	goto _ERR;    }
+
     mpf_exch(&xn, b);
   _ERR:
     mpf_clear_multi(&one, &x0, &xn, &A, &hn, &EPS, NULL);
