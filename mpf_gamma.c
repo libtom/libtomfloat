@@ -130,12 +130,12 @@ int mpf_lngamma(mp_float * a, mp_float * b)
 	// TODO: check if that is really true
 	eps = oldeps;
     } else {
-	accuracy = mpf_getdecimalexponent(oldeps + MP_DIGIT_BIT);
-	A = (size_t) ceil(1.252850440912568095810522965 * accuracy);
+	accuracy = oldeps + MP_DIGIT_BIT;
+	A = (size_t) ceil(0.37714556279552730250018797240191093794 * accuracy);
 	// We need to compute the coefficients as exact as possible, so
 	// increase the working precision acccording to the largest coefficient
 	// TODO: probably too much
-	eps = oldeps + ((A * 144) / 100);
+	eps = ((accuracy * 116) / 100);
 	if ((err = fill_spougecache(A, accuracy, eps)) != MP_OKAY) {
 	    return err;
 	}
