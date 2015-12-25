@@ -12,7 +12,7 @@ int mpf_const_nan(mp_float * a)
 	    return err;
 	}
     }
-    a->mantissa.dp[a->mantissa.used] = (mp_digit)(1);
+    a->mantissa.dp[a->mantissa.used - 1] = (mp_digit)(1);
     // set exponent to all-ones
     a->exp = LONG_MAX;
     // keep sign as it is and do not normalize
