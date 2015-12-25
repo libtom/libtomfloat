@@ -1,6 +1,5 @@
 #include <tomfloat.h>
 #include <math.h>
-
 // Xavier Gourdon & Pascal Sebah, The Euler constant: gamma
 // http://numbers.computation.free.fr/Constants/Gamma/gamma.pdf
 // Jonathan Borwein & David Bailey, Mathematics by Experiment, A. K. Peters, 2003
@@ -20,7 +19,6 @@ static int brent_macmillan_gamma(mp_float * a)
     eps = oldeps + MP_DIGIT_BIT;
 
     // the limit to end the loop, see paper of Borwein et al.
-    dec = (mp_digit) ((mpf_getdecimalexponent(eps) * 208) / 100) + 3;
     if ((err =
 	 mp_init_multi(&A, &B, &U, &V, &nsquare, &k, &t1, NULL)) != MP_OKAY) {
 	return err;
@@ -30,9 +28,7 @@ static int brent_macmillan_gamma(mp_float * a)
     // tmp = 31 for eps = 10^10 (It is quite a brave assumption that somebody
     //                           might use this lib for 10^10 bit long numbers)
     mp_set(&nsquare, 1);
-    if ((err = mp_mul_2d(&nsquare, tmp, &nsquare)) != MP_OKAY) {
-	goto _ERR;
-    }
+    if ((err = mp_mul_2d(&nsquare, tmp, &nsquare)) != MP_OKAY) {	goto _ERR;    }
     if ((err = mp_sqr(&nsquare, &nsquare)) != MP_OKAY) {
 	goto _ERR;
     }
@@ -89,15 +85,14 @@ static int brent_macmillan_gamma(mp_float * a)
 	if ((err = mp_div(&A, &k, &A, NULL)) != MP_OKAY) {
 	    goto _ERR;
 	}
-
+        if (mp_iszero(&A)) {
+            break;
+        }
 	if ((err = mp_add(&U, &A, &U)) != MP_OKAY) {
 	    goto _ERR;
 	}
 	if ((err = mp_add(&V, &B, &V)) != MP_OKAY) {
 	    goto _ERR;
-	}
-	if (k.dp[0] == dec) {
-	    break;
 	}
 	if ((err = mp_add_d(&k, 1, &k)) != MP_OKAY) {
 	    goto _ERR;
