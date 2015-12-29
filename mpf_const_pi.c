@@ -148,8 +148,8 @@ int mpf_const_pi(mp_float * a)
 		err = MP_VAL;
 		fprintf(stderr, "Pi by AGM did not converge in %ld rounds\n",
 			k);
-printf("aa ");mp_put(&(aa.mantissa),16);puts("");
-printf("bb ");mp_put(&(b.mantissa),16);puts("");
+printf("aa ");mpf_dump(&aa);
+printf("bb ");mpf_dump(&b);
 		goto _ERR;
 	    }
 	} while (mpf_cmp(&aa, &b) != MP_EQ);

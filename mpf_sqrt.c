@@ -19,7 +19,7 @@ int mpf_sqrt_old(mp_float * a, mp_float * b)
     mp_float A, B;
 
     oldeps = a->radix;
-    eps = oldeps + MP_DIGIT_BIT;
+    eps = 2 * oldeps + MP_DIGIT_BIT;
 
     err = MP_OKAY;
 
@@ -52,11 +52,12 @@ int mpf_sqrt_old(mp_float * a, mp_float * b)
 }
 
 
-int mpf_sqrt_normal(mp_float * a, mp_float * b)
+int mpf_sqrt_newton(mp_float * a, mp_float * b)
 {
     int err, sign;
-    long oldeps, eps, nloops, maxrounds;
-    mp_float one, x0, xn, A, hn, EPS;
+    long oldeps, eps, nloops, maxrounds, expnt, rest;
+    double d;
+    mp_float one, x0, xn, A, hn, EPS, frac;
 
     if (mpf_isnan(a) || mpf_isinf(a)) {
 	return mpf_copy(a, b);
@@ -69,10 +70,10 @@ int mpf_sqrt_normal(mp_float * a, mp_float * b)
 	return mpf_const_0(b);
     }
     oldeps = a->radix;
-    eps = oldeps + MP_DIGIT_BIT;
+    eps = oldeps + 4 * MP_DIGIT_BIT ;
     err = MP_OKAY;
 
-    if ((err = mpf_init_multi(eps, &one, &x0, &xn, &A, &hn, NULL)) != MP_OKAY) {
+    if ((err = mpf_init_multi(eps, &one, &x0, &xn, &A, &hn, &frac, NULL)) != MP_OKAY) {
 	return err;
     }
 
@@ -88,7 +89,33 @@ int mpf_sqrt_normal(mp_float * a, mp_float * b)
 	goto _ERR;
     }
 
-    xn.exp -= (xn.exp + xn.radix) / 2 - 1;
+    // compute seed
+    if ((err = mpf_frexp(&xn, &frac, &expnt)) != MP_OKAY) {
+        goto _ERR;
+    }
+    if ((err = mpf_set_double(&frac, &d)) != MP_OKAY) {
+        goto _ERR;
+    }
+    // (f) ^(1/n) 
+    d = sqrt(d);
+    // integer part floor(e/2)
+    expnt = expnt / 2;
+    // add the fractional part {e/2}
+    rest = ((double)(expnt)) / (2.0) - expnt;
+    rest = pow(2,rest);
+    d *= rest;
+    if ((err = mpf_get_double(d, &frac)) != MP_OKAY) {
+        goto _ERR;
+    }
+    // f^(1/2) * 2^( e/2 )
+    if ((err = mpf_ldexp(&frac, expnt, &xn)) != MP_OKAY) {
+        goto _ERR;
+    }
+    if (d >= 1.0){
+        if( (err = mpf_normalize(&xn) ) != MP_OKAY){
+            goto _ERR;
+        }
+    }
 
     if ((err = mpf_inv(&xn, &xn)) != MP_OKAY) {
 	goto _ERR;
@@ -98,7 +125,7 @@ int mpf_sqrt_normal(mp_float * a, mp_float * b)
 	goto _ERR;
     }
 
-    maxrounds = A.radix;
+    maxrounds = (long)(log(eps)/log(2)) + 5;
     nloops = 0L;
     if ((err = mpf_init(&EPS, oldeps)) != MP_OKAY) {
 	goto _ERR;
@@ -151,7 +178,7 @@ int mpf_sqrt_normal(mp_float * a, mp_float * b)
     if ((err = mpf_mul(&A, &xn, &xn)) != MP_OKAY) {
 	goto _ERR;
     }
-    if ((err = mpf_normalize_to(&xn, oldeps)) != MP_OKAY) {
+    if ((err = mpf_normalize_to(&xn, a->radix)) != MP_OKAY) {
 	goto _ERR;
     }
     mpf_exch(&xn, b);
@@ -193,21 +220,9 @@ int mpf_sqrt(mp_float * a, mp_float * b)
 	return mpf_const_0(b);
     }
     oldeps = a->radix;
-    starteps = 2 * MP_DIGIT_BIT;
+    starteps = 64;//2 * MP_DIGIT_BIT;
     maxeps = oldeps + MP_DIGIT_BIT;
-    // Limits are experimental values only. For now.
-    // There is no obvious reason for that high need, so
-    // it's most probably a bug elsewhere.
-    if (oldeps > 400000 && oldeps <= 650000 ) {
-       maxeps = maxeps + maxeps/2;
-    }
-    else if (oldeps > 650000&& oldeps <= 800000) {
-       maxeps = 2*maxeps;
-    }
-    else {
-       // is enough for ca. 3.32 mio. bits (ca. 1 mio. dec. digits) and prob. more
-       maxeps = 4 * maxeps;
-    }
+
     err = MP_OKAY;
 
     if ((err =
@@ -233,7 +248,7 @@ int mpf_sqrt(mp_float * a, mp_float * b)
 	goto _ERR;
     }
 
-    maxrounds = A.radix;
+    maxrounds = (long)(log(maxeps)/log(2)) + 5;
     nloops = 0L;
     // hammer a nail into the floor, it shall be the calibration point
     if ((err = mpf_init(&EPS, oldeps)) != MP_OKAY) {
@@ -276,7 +291,9 @@ int mpf_sqrt(mp_float * a, mp_float * b)
 	}
 	sign = hn.mantissa.sign;
 	hn.mantissa.sign = MP_ZPOS;
-
+//fprintf(stderr,"SQRT 5 %ld %ld\n",hn.exp, EPS.exp);
+        if (mpf_iszero(&hn))
+            break;
 	// It makes more sense to compare after that limit is reached
 	if (hn.exp <= EPS.exp) {
 	    if (mpf_cmp(&hn, &EPS) != MP_GT) {

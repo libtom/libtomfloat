@@ -6,7 +6,7 @@ default: libtomfloat.a
 
 CFLAGS += -O2 -g3 -Wall -W -I./
 
-VERSION=0.02
+VERSION=0.03
 
 #default files to install
 LIBNAME=libtomfloat.a
@@ -70,8 +70,6 @@ mp_acoth_binary_splitting.o mp_acot_binary_splitting.o\
 mpf_lambertw.o\
 mpf_gamma.o
 
-
-
 #mpf_trig_arg_reduct.o
 
 
@@ -85,17 +83,17 @@ ex1: libtomfloat.a demos/ex1.o
 	$(CC) demos/ex1.o libtomfloat.a -ltommath -lm -o ex1
 
 #LTF user manual
-mandvi: float.tex
-	echo "hello" > float.ind
-	latex float > /dev/null
-	latex float > /dev/null
-	makeindex float
-	latex float > /dev/null
+mandvi: float_new.tex
+	echo "hello" > float_new.ind
+	latex float_new > /dev/null
+	latex float_new > /dev/null
+	makeindex float_new
+	latex float_new > /dev/null
 
 #LTF user manual [pdf]
 manual:	mandvi
-	pdflatex float >/dev/null
-	rm -f float.aux float.dvi float.log float.idx float.lof float.out float.toc
+	pdflatex float_new >/dev/null
+	rm -f float_new.aux float_new.dvi float_new.log float_new.idx float_new.lof float_new.out float_new.toc
 
 install: libtomfloat.a
 	install -d -g root -o root $(DESTDIR)$(LIBPATH)
@@ -105,7 +103,7 @@ install: libtomfloat.a
 
 clean:
 	rm -f $(OBJECTS) libtomfloat.a *~ demos/*.o demos/*~ ex1
-	rm -f float.aux float.dvi float.log float.idx float.lof float.out float.toc float.ilg float.ind float.pdf
+	rm -f float_new.aux float_new.dvi float_new.log float_new.idx float_new.lof float_new.out float_new.toc float_new.ilg float_new.ind float_new.pdf
 
 zipup: clean manual
 	cd .. ; rm -rf ltf* libtomfloat-$(VERSION) ; mkdir libtomfloat-$(VERSION) ; \

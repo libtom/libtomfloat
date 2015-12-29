@@ -1,5 +1,7 @@
 #include <tomfloat.h>
 
+#include <string.h>
+
 static long get_mp_digits(mp_int * a, int base)
 {
     double log210;
@@ -24,6 +26,30 @@ static long get_mp_digits(mp_int * a, int base)
     return (long) (round(bits / log210));
 }
 
+static int mp_print(mp_int * a)
+{
+    char *str, *s0;
+    size_t size;
+    int err;
+
+    size = (size_t) (get_mp_digits(a, 10) + 10);
+    str = malloc(size * sizeof(char));
+    if (NULL == str) {
+	fprintf(stderr, "malloc failed to allocate %lu bytes\n",
+		size * sizeof(char));
+	return MP_MEM;
+    }
+    s0 = str;
+    while (--size) {
+	*s0++ = '\0';
+    }
+    if ((err = mp_toradix(a, str, 10)) != MP_OKAY) {
+	return err;
+    }
+    printf("%s\n", str);
+    free(str);
+    return MP_OKAY;
+}
 
 /* Convert a mp_float into a string. Scientific notation and base 10 only
   (for now) 
@@ -39,7 +65,7 @@ int mpf_get_str(mp_float * a, char **str, int base)
   int decprec, decexpo;
   int sign, signbit;
   int rlen;
-  char *tmp, *s;
+  char *tmp, *s,**s0;
   size_t len, offset;
   long eps, move;
   double d;
@@ -228,7 +254,7 @@ int mpf_get_str(mp_float * a, char **str, int base)
     if (sign == MP_NEG) {
       ret.sign = MP_NEG;
     }
-    if ((err = mp_toradix(&ret, *str, base)) != MP_OKAY) {
+    if ((err = mp_get_str(&ret, *str, 0,base)) != MP_OKAY) {
       mp_clear_multi(&ret, &ten, NULL);
       free(str);
       return err;
@@ -243,7 +269,6 @@ int mpf_get_str(mp_float * a, char **str, int base)
     }
     ret.sign = MP_ZPOS;
     decexpo = mpf_getdecimalexponent(a->exp);
-    tmpdigits = get_mp_digits(&ret, base) + 5;
 
     // TODO: implement the other two bases
     if( (err = mpf_const_le10(&log10) ) != MP_OKAY){
@@ -341,6 +366,8 @@ int mpf_get_str(mp_float * a, char **str, int base)
         }
       }
     }
+    tmpdigits = get_mp_digits(&ret, base) + 5;
+//printf("length ret = %d dec digits = %d\n",mp_count_bits(&ret), (int)(mp_count_bits(&ret)/(log(10)/log(2)) ) );
 
     // digits in ret + sign + expo.-mark + expo + angst-allowance = 50
     *str = malloc((tmpdigits + 50) * sizeof(char));
@@ -350,10 +377,13 @@ int mpf_get_str(mp_float * a, char **str, int base)
       mp_clear_multi(&ret, &ten, NULL);
       return err;
     }
+    
+//printf("length tmpdigits = %ld\n",tmpdigits + 50);
+
     if (sign == MP_NEG) {
       ret.sign = MP_NEG;
     }
-    if ((err = mp_toradix(&ret, *str, base)) != MP_OKAY) {
+    if ((err = mp_get_str(&ret, *str, 0,base)) != MP_OKAY) {
       mp_clear_multi(&ret, &ten, NULL);
       free(str);
       return err;

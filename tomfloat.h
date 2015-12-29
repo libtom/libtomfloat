@@ -147,6 +147,7 @@ int  mpf_pow_d(mp_float *a, long e, mp_float *c);      /* c = a^b       */
 int  mpf_ln(mp_float *a, mp_float *b);                 /* b = ln a      */
 int  mpf_invsqrt(mp_float *a, mp_float *b);            /* b = 1/sqrt(a) */
 int  mpf_inv(mp_float *a, mp_float *b);                /* b = 1/a       */
+int  mpf_inv_householder(mp_float *a, mp_float *b);
 int  mpf_sqrt(mp_float *a, mp_float *b);               /* b = sqrt(a)   */
 
 /* Trig */

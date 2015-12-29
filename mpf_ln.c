@@ -78,7 +78,8 @@ int mpf_ln(mp_float * a, mp_float * b)
     // version might have changed that see mpf_global_variables.c for the
     // exact values and adjust according to your needs.
     //  Please contact the author if you did so succesfully.
-    if (a->radix >=  MPF_LOG_AGM_1_CUTOFF) {
+    if (a->radix >=  MPF_LOG_AGM_1_CUTOFF
+) {
         return mpf_ln_agm(a, b);
     }
     // TODO: make series an extra function (useful for e.g.: benchmarking)
@@ -235,8 +236,8 @@ int mpf_ln_agm(mp_float * a, mp_float * b)
     m = p / ilog2;
 
     // a lower limit is simpler
-    if (m < 10) {
-	m = 10;
+    if (m < 12) {
+	m = 12;
     }
 
     if ((err = mpf_const_d(&minv, m)) != MP_OKAY) {
@@ -273,7 +274,7 @@ int mpf_ln_agm(mp_float * a, mp_float * b)
 	goto _ERR;
     }
     if (sublog2 == 1) {
-	if ((err = mpf_const_ln_d(&one, 2)) != MP_OKAY) {
+	if ((err = mpf_const_le2(&one)) != MP_OKAY) {
 	    goto _ERR;
 	}
 	if ((err = mpf_sub(&x, &one, &x)) != MP_OKAY) {

@@ -1,5 +1,6 @@
 #include <tomfloat.h>
 #include <math.h>
+
 // Xavier Gourdon & Pascal Sebah, The Euler constant: gamma
 // http://numbers.computation.free.fr/Constants/Gamma/gamma.pdf
 // Jonathan Borwein & David Bailey, Mathematics by Experiment, A. K. Peters, 2003
@@ -11,7 +12,6 @@ static int brent_macmillan_gamma(mp_float * a)
     unsigned long tmp;
     mp_int A, B, U, V, nsquare, k, t1;
     mp_float E, u, v;
-    mp_digit dec;
 
     err = MP_OKAY;
 

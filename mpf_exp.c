@@ -12,6 +12,7 @@
  */
 #include <tomfloat.h>
 
+static int mpf_exp_newton(mp_float * a, mp_float * b);
 
 /* compute b = e^a using e^x == \sum_{n=0}^{\infty} {1 \over n!}x^n */
 int mpf_exp(mp_float * a, mp_float * b)
@@ -29,7 +30,14 @@ int mpf_exp(mp_float * a, mp_float * b)
 	return mpf_const_d(a, 1);
     }
 
+
+
     oldeps = a->radix;
+
+    if (oldeps > 2 * MP_DIGIT_BIT) {
+puts("not more than one time?");
+        return mpf_exp_newton(a,b);
+    }
 
     decexpo = a->exp + a->radix;
     if (decexpo > 0) {
@@ -78,7 +86,6 @@ int mpf_exp(mp_float * a, mp_float * b)
 */
 	default:
 	    err = MP_RANGE;
-	    goto _ERR;
 	    break;
 	}
     } else {
@@ -101,13 +108,16 @@ int mpf_exp(mp_float * a, mp_float * b)
 	nt.mantissa.sign = MP_ZPOS;
     }
 
-    if ((err = mpf_const_d(&ret, 1)) != MP_OKAY) {
+    if ((err = mpf_const_0(&ret)) != MP_OKAY) {
 	goto _ERR;
     }
     if ((err = mpf_const_d(&to, 1)) != MP_OKAY) {
 	goto _ERR;
     }
     if ((err = mpf_const_d(&tx, 1)) != MP_OKAY) {
+	goto _ERR;
+    }
+    if ((err = mpf_const_d(&one, 1)) != MP_OKAY) {
 	goto _ERR;
     }
     n = 1;
@@ -151,17 +161,10 @@ int mpf_exp(mp_float * a, mp_float * b)
 	    goto _ERR;
 	}
     } while (mpf_cmp(&x0, &ret) != MP_EQ);
+
 #ifdef DEBUG
     fprintf(stderr, "loops = %ld\n", (eps + 10) - loops);
 #endif
-    // we used the standard series to compute exp(z/2^m) + 1
-    // ret = ret - 1;
-    if ((err = mpf_const_d(&one, 1)) != MP_OKAY) {
-	goto _ERR;
-    }
-    if ((err = mpf_sub(&ret, &one, &ret)) != MP_OKAY) {
-	goto _ERR;
-    }
     // reverse argument reduction
     for (i = 0; i < m; i++) {
 	// to = ret^2
@@ -175,6 +178,7 @@ int mpf_exp(mp_float * a, mp_float * b)
 	    goto _ERR;
 	}
     }
+
     // we have exp(z) - 1 now, add one unit
     if ((err = mpf_add(&ret, &one, &ret)) != MP_OKAY) {
 	goto _ERR;
@@ -196,3 +200,121 @@ int mpf_exp(mp_float * a, mp_float * b)
     return err;
 }
 
+// $x_{n+1} = x_n ( 1 + a - \log( x_n)  )$
+
+
+static int mpf_exp_newton(mp_float * a, mp_float * b){
+    long n, oldeps, eps, nloops, maxrounds, starteps, maxeps;
+    mp_float t, x0, xn, one, A, EPS;
+    int err, sign, m, i;
+
+    sign = MP_ZPOS;
+    err = MP_OKAY;
+
+    oldeps = a->radix;
+    eps = oldeps + 4 * MP_DIGIT_BIT;
+
+    if ((err = mpf_init(&A, oldeps)) != MP_OKAY) {
+        return err;
+    }
+    if ((err = mpf_copy(a, &A)) != MP_OKAY) {
+	mpf_clear(&A);
+        return err;
+    }
+    // get the seed with the series
+    if ((err = mpf_normalize_to(&A, 2 * MP_DIGIT_BIT)) != MP_OKAY) {
+	mpf_clear(&A);
+        return err;
+    }
+
+    mpf_exp(&A,&A);
+
+    maxrounds = A.radix;
+    nloops = 0L;
+
+    if ((err = mpf_init(&EPS, oldeps)) != MP_OKAY) {
+	mpf_clear(&A);
+        return err;
+    }
+    if ((err = mpf_const_eps(&EPS)) != MP_OKAY) {
+	mpf_clear(&A);
+	mpf_clear(&EPS);
+        return err;
+    }
+
+    oldeps = a->radix;
+    starteps = 2 * MP_DIGIT_BIT;
+    maxeps = oldeps + MP_DIGIT_BIT;
+
+    if ((err =
+	 mpf_init_multi(starteps, &EPS, &t, &x0, &xn,&one, NULL)) != MP_OKAY) { 
+	return err;
+    }
+    if ((err = mpf_normalize_to(&A, starteps)) != MP_OKAY) {
+        goto _ERR;
+    }
+    if ((err = mpf_copy(&A, &xn)) != MP_OKAY) {
+        goto _ERR;
+    }
+    if ((err = mpf_const_d(&one, 1L)) != MP_OKAY) {
+        goto _ERR;
+    }
+
+    // $x_{n+1} = x_n ( 1 + a - \log( x_n)  )$
+    do {
+        if ((err = mpf_copy(&xn, &x0)) != MP_OKAY) {
+            goto _ERR;
+        }
+        starteps = starteps * 2;
+        if (starteps > maxeps) {
+            // do one round with full precision
+            starteps = maxeps;
+        }
+        if ((err =
+             mpf_normalize_to_multi(starteps, &one, &x0, &xn, &A, &t,
+                                    &EPS,NULL)) != MP_OKAY) {
+            goto _ERR;
+        }
+
+        // t = log(x_n)
+        if ((err = mpf_ln(&xn, &t)) != MP_OKAY) {
+            goto _ERR;
+        }
+
+        if ((err = mpf_copy(a, &A)) != MP_OKAY) {
+            goto _ERR;
+        }
+        if ((err = mpf_normalize_to(&A, starteps)) != MP_OKAY) {
+            goto _ERR;
+        }
+        // t = a - t
+        if ((err = mpf_sub(&A, &t, &t)) != MP_OKAY) {
+            goto _ERR;
+        }
+        // t = 1 + t
+        if ((err = mpf_add(&t, &one, &t)) != MP_OKAY) {
+            goto _ERR;
+        }
+        // xn = xn * t
+        if ((err = mpf_mul(&xn, &t, &xn)) != MP_OKAY) {
+            goto _ERR;
+        }
+        nloops++;
+        if (nloops >= maxrounds) {
+            // it might be a bug elsewhere, please report
+            fprintf(stderr, "mpf_sqrt did not converge in %ld rounds\n",
+                    nloops);
+            return MP_RANGE;
+        }
+    } while (mpf_cmp(&x0, &xn) != MP_EQ);
+
+    if ((err = mpf_normalize_to(&xn, oldeps)) != MP_OKAY) {
+       goto _ERR;    
+    }
+
+    mpf_exch(&xn, b);
+
+  _ERR:
+    mpf_clear_multi(&t, &x0, &xn, &one, NULL);
+    return err;
+}

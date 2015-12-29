@@ -19,7 +19,7 @@ int mpf_inv_newton(mp_float * a, mp_float * b)
 {
     int err, sign, sign2;
     double d;
-    long expnt, oldeps, eps, nloops, maxrounds;
+    long expnt, oldeps, eps, nloops, maxrounds, rest;
     mp_float frac, one, x0, xn, A, hn, EPS;
 
     /* get sign of input */
@@ -57,6 +57,7 @@ int mpf_inv_newton(mp_float * a, mp_float * b)
     if ((err = mpf_ldexp(&frac, expnt, &frac)) != MP_OKAY) {
 	goto _ERR;
     }
+
     // TODO calculate guard digits more exactly and do it loop-wise
     if ((err = mpf_normalize_to(&frac, eps)) != MP_OKAY) {
 	goto _ERR;
@@ -148,7 +149,7 @@ int mpf_inv(mp_float * a, mp_float * b)
     oldeps = a->radix;
     eps = oldeps + MP_DIGIT_BIT;
 
-    starteps = 2 * MP_DIGIT_BIT;
+    starteps = 64;//2 * MP_DIGIT_BIT;
     maxeps = oldeps + MP_DIGIT_BIT;
 
     err = MP_OKAY;
@@ -169,12 +170,22 @@ int mpf_inv(mp_float * a, mp_float * b)
     if ((err = mpf_set_double(&frac, &d)) != MP_OKAY) {
 	goto _ERR;
     }
+//fprintf(stderr,"\n1 %g\n",d);
     d = 1.0 / d;
+//fprintf(stderr,"2 %g\n",d);
     if ((err = mpf_get_double(d, &frac)) != MP_OKAY) {
 	goto _ERR;
     }
-    expnt = -expnt + 1;
+//fprintf(stderr,"3 %ld\n",expnt);
+    if ( d > 1.0)
+        expnt = -expnt ;
+    else
+        expnt = -expnt + 1;
+//fprintf(stderr,"4 %ld\n",expnt);
     if ((err = mpf_ldexp(&frac, expnt, &frac)) != MP_OKAY) {
+	goto _ERR;
+    }
+    if ((err = mpf_normalize(&frac)) != MP_OKAY) {
 	goto _ERR;
     }
 
@@ -187,10 +198,8 @@ int mpf_inv(mp_float * a, mp_float * b)
     if ((err = mpf_copy(a, &A)) != MP_OKAY) {
 	goto _ERR;
     }
-    if ((err = mpf_normalize_to(&A, starteps)) != MP_OKAY) {
-	goto _ERR;
-    }
-    maxrounds = A.radix;
+//    if ((err = mpf_normalize_to(&A, starteps)) != MP_OKAY) { goto _ERR;  }
+    maxrounds = (long)(log(maxeps)/log(2)) + 5;//A.radix;
     nloops = 0L;
     if ((err = mpf_init(&EPS, oldeps)) != MP_OKAY) {
 	goto _ERR;
@@ -231,6 +240,9 @@ int mpf_inv(mp_float * a, mp_float * b)
 	sign2 = hn.mantissa.sign;
 	hn.mantissa.sign = MP_ZPOS;
 	// It makes more sense to compare after that limit is reached
+//fprintf(stderr,"5 %ld %ld\n",hn.exp, EPS.exp);
+        if (mpf_iszero(&hn))
+            break;
 	if (hn.exp <= EPS.exp) {
 	    if (mpf_cmp(&hn, &EPS) != MP_GT) {
 		break;
@@ -256,7 +268,7 @@ int mpf_inv(mp_float * a, mp_float * b)
 	nloops++;
 	if (nloops >= maxrounds) {
 	    // it might be a bug elsewhere, please report
-	    fprintf(stderr, "mpf_inv did not converge in %ld rounds", nloops);
+	    fprintf(stderr, "mpf_inv did not converge in %ld rounds, exp %ld\n", nloops,xn.exp);
 	    return MP_RANGE;
 	}
       // Comparing is not necessary here but might save an iteration
