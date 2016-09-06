@@ -24,6 +24,9 @@ int mpf_const_eps(mp_float * a)
         return mpf_normalize_to(a, eps);
     } else {
         if (mpf_eps_precision == 0) {
+            if (mpf_eps.mantissa.dp != NULL) {
+        		mpf_clear(&mpf_eps);
+        	}
             if ((err = mpf_init(&mpf_eps, a->radix)) != MP_OKAY) {
                 return err;
             }
