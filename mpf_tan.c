@@ -13,27 +13,65 @@
 #include <tomfloat.h>
 
 /* tan = sin/cos, prolly fix this up later */
-int  mpf_tan(mp_float *a, mp_float *b)
+/* CZ: Still tan = sin/cos, Tom,  but only very high precisions shall fear it */
+int mpf_tan(mp_float * a, mp_float * b)
 {
-   int       err;
-   mp_float  tmp;
+    mp_float x;
+    int err, k, sign;
+    long size;
 
-   /* get cos of a */
-   if ((err = mpf_init(&tmp, b->radix)) != MP_OKAY) {
-      return err;
-   }
-   if ((err = mpf_cos(a, &tmp)) != MP_OKAY)                     { goto __ERR; }
+    if (mpf_iszero(a)) {
+	return mpf_const_0(b);
+    }
 
-   /* now make it upside down ;-) (this should catch domain errors too) */
-   if ((err = mpf_inv(&tmp, &tmp)) != MP_OKAY)                  { goto __ERR; }
+    size = a->radix + a->exp;
+    if (size > a->radix) {
+	// raise invalid (TLOSS in SysV)?
+	// feraiseexcept(FE_INVALID)
+	// mpf_errno = E_DOM
+	// or inexact?
+	if ((err = mpf_const_nan(b)) != MP_OKAY) {
+	    return err;
+	}
+	return MP_VAL;
+    }
+    sign = a->mantissa.sign;
+    if ((err = mpf_init(&x, a->radix)) != MP_OKAY) {
+	return err;
+    }
+    if ((err = mpf_trig_arg_reduct(a, &x, &k)) != MP_OKAY) {
+	goto _ERR;
+    }
+    k = k % 4;
 
-   /* put sin in b */
-   if ((err = mpf_sin(a, b)) != MP_OKAY)                        { goto __ERR; }
+    if ((err = mpf_sincos(&x, &x, 1, 1, 0)) != MP_OKAY) {
+	goto _ERR;
+    }
 
-   /* multiply the two and we done */
-	   err = mpf_mul(b, &tmp, b);
-
-__ERR: mpf_clear(&tmp);
-   return err;
+    switch (k) {
+    case 0:
+	break;
+    case 1:
+	if ((err = mpf_inv(&x, &x)) != MP_OKAY) {
+	    goto _ERR;
+	}
+	sign = (sign == MP_NEG) ? MP_ZPOS : MP_NEG;
+	break;
+    case 2:
+	break;
+    default:
+	if ((err = mpf_inv(&x, &x)) != MP_OKAY) {
+	    goto _ERR;
+	}
+	sign = (sign == MP_NEG) ? MP_ZPOS : MP_NEG;
+	break;
+    }
+    x.mantissa.sign = sign;
+    if ((err = mpf_copy(&x, b)) != MP_OKAY) {
+	goto _ERR;
+    }
+  _ERR:
+    mpf_clear(&x);
+    return err;
 }
 

@@ -14,6 +14,9 @@
 #define TF_H_
 
 #include <tommath.h>
+// The math-functions gets used a lot, especially as initial values for the
+// Newton based algorithms
+#include <math.h>
 
 /* this is mp_float type */
 typedef struct {
@@ -21,6 +24,27 @@ typedef struct {
      long   radix,       /* how many bits for mantissa */
             exp;         /* current exponent, e.g. mantissa * 2^exp == number  */
 } mp_float;
+
+
+
+/* Global radix value */
+extern long mpf_global_radix;
+/* Global error holder?  */
+extern int mpf_errno;
+
+/* Some cutoffs */
+extern int MPF_LOG_AGM_1_CUTOFF;
+extern int MPF_LOG_AGM_2_CUTOFF;
+extern long MPF_LOG_AGM_REDUX_CUTOFF;
+/* Handling of the precision set above */
+long mpf_getprecision();
+long mpf_getdecimalprecision();
+/* A threadsafe variant useing a mutex is available if MPF_USE_THREADS
+   is defined */
+void mpf_setprecision(long r);
+
+/* A helper for the radix conversion */
+long mpf_getdecimalexponent(long exp);
 
 /* initializers */
 int  mpf_init(mp_float *a, long radix);
@@ -37,19 +61,26 @@ void mpf_exch(mp_float *a, mp_float *b);
 /* maintainers/misc */
 int  mpf_normalize(mp_float *a);
 int  mpf_normalize_to(mp_float *a, long radix);
+int  mpf_normalize_to_multi(long radix, mp_float *a, ...);
 int  mpf_iterations(mp_float *a);
+int  mpf_from_mp_int(mp_int * a, mp_float * b);
 
 /* constants */
+int  mpf_const_inf(mp_float *a, int sign);      /* set to +/- infinity */
+int  mpf_const_nan(mp_float *a);                /* set to NaN */
 int  mpf_const_0(mp_float *a);                  /* valid zero */
 int  mpf_const_d(mp_float *a, long d);          /* valid d */
 int  mpf_const_ln_d(mp_float *a, long b);       /* a = ln(b)     */
 int  mpf_const_sqrt_d(mp_float *a, long b);     /* a = sqrt(b);  */
+
+int  mpf_const_gamma(mp_float * a);             /* Euler-Gamma ~0.577215 */
 
 /* math constants as they appear in math.h */
 int  mpf_const_e(mp_float *a);                  /* e             */
 int  mpf_const_l2e(mp_float *a);                /* log_2 e       */
 int  mpf_const_l10e(mp_float *a);               /* log_10 e      */
 int  mpf_const_le2(mp_float *a);                /* log_e 2       */
+int  mpf_const_le10(mp_float *a);               /* log_e 10      */
 int  mpf_const_pi(mp_float *a);                 /* Pi            */
 int  mpf_const_pi2(mp_float *a);                /* Pi/2          */
 int  mpf_const_pi4(mp_float *a);                /* Pi/4          */
@@ -80,14 +111,43 @@ int  mpf_div_d(mp_float *a, long b, mp_float *c);      /* c = a / b    */
 /* compares */
 int  mpf_cmp(mp_float *a,   mp_float *b);
 int  mpf_cmp_d(mp_float *a, long b, int *res);
+
+/* some useful macros */
+
+/* "signbit" as in the C-Standard (and Posix) */
+#define mpf_signbit(a) \
+( \
+  (a)->mantissa.sign \
+)
+
 #define mpf_iszero(a) mp_iszero(&((a)->mantissa))
+
+#define mpf_isnan(a) \
+( \
+a->mantissa.dp[a->mantissa.used - 1] ==  (mp_digit) (1) \
+&& \
+a->exp == LONG_MAX\
+)
+
+#define mpf_isinf(a) \
+( \
+a->mantissa.dp[a->mantissa.used - 1] ==  (mp_digit) (0) \
+&& \
+a->exp == LONG_MAX\
+)
+
+#define mpf_isdouble(a) (-(1021 + a->radix) <= a->exp && a->exp <= (1024 - a->radix))
+
+#define mpf_isfraction(a) (mpf_iszero(a) || (a->exp <= -a->radix))
 
 /* Algebra */
 int  mpf_exp(mp_float *a, mp_float *b);                /* b = e^a       */
 int  mpf_pow(mp_float *a, mp_float *b, mp_float *c);   /* c = a^b       */
+int  mpf_pow_d(mp_float *a, long e, mp_float *c);      /* c = a^b       */
 int  mpf_ln(mp_float *a, mp_float *b);                 /* b = ln a      */
 int  mpf_invsqrt(mp_float *a, mp_float *b);            /* b = 1/sqrt(a) */
 int  mpf_inv(mp_float *a, mp_float *b);                /* b = 1/a       */
+int  mpf_inv_householder(mp_float *a, mp_float *b);
 int  mpf_sqrt(mp_float *a, mp_float *b);               /* b = sqrt(a)   */
 
 /* Trig */
@@ -101,5 +161,68 @@ int  mpf_atan(mp_float *a, mp_float *b);               /* b = atan(a)   */
 /* ASCII <=> mp_float conversions */
 char *mpf_to_string(mp_float *a, mp_digit radix);
 int mpf_from_string(mp_float *a, const char *str, mp_digit radix);
+
+/* Bases 2, 10, and 16 from IEEE-754 formated strings to mp_float */
+int mpf_set_str(const char *str, mp_float * c);
+/* Conversion of mp_float to string, base 10 only (for now) */
+/* This function allocates memory for the string by itself, freeing it is
+   left to the caller */
+int mpf_get_str(mp_float * a, char **str, int base);
+
+int mpf_get_double(double d, mp_float * a);
+int mpf_set_double(mp_float * a, double *d);
+
+int mpf_set_int(mp_float * a, int d);
+
+int mpf_frexp(mp_float * a, mp_float * b, long *exp);
+int mpf_ldexp(mp_float * a, long exp, mp_float * b);
+
+long mpf_digits(mp_float *a);
+
+int mpf_nthroot(mp_float * a, long n, mp_float * b);
+
+int mpf_agm(mp_float * a, mp_float * b, mp_float * c);
+
+
+int mpf_floor(mp_float *a, mp_float *b);
+int mpf_ceil(mp_float *a, mp_float *b);
+int mpf_round(mp_float *a, mp_float *b);
+
+int mpf_trig_arg_reduct(mp_float *a, mp_float *b, int *k);
+
+int mpf_sincos(mp_float *a, mp_float *b, int cosine, int tan, int hyper);
+int mpf_const_eps(mp_float *a);
+int mpf_dump(mp_float * a);
+
+int mpf_sinh(mp_float * a, mp_float * b);
+int mpf_cosh(mp_float * a, mp_float * b);
+int mpf_tanh(mp_float * a, mp_float * b);
+
+int mpf_kernel_atan(mp_float * a, mp_float * b, int hyper);
+int mpf_atan(mp_float * a, mp_float * b);
+int mpf_atan2(mp_float * a, mp_float * b, mp_float *c);
+int mpf_atanh(mp_float * a, mp_float * b);
+int mpf_asinh(mp_float * a, mp_float * b);
+int mpf_acosh(mp_float * a, mp_float * b);
+
+// integer trig. functions (for Machin's fomrulas)
+#define mp_isone(a) ( (a)->used == 1 && (a)->dp[0] == 1 && (a)->sign == MP_ZPOS )
+int mp_acoth_binary_splitting(mp_int * q, mp_int * a, mp_int * b, mp_int * P, mp_int * Q, mp_int * R);
+int mp_acot_binary_splitting(mp_int * q, mp_int * a, mp_int * b, mp_int * P, mp_int * Q, mp_int * R);
+
+// Lambert-W aka ProductLog
+int mpf_lambertw(mp_float *a, mp_float *b, int branch);
+
+// gamma functions (Spouge. Slow but do not need Bernoulli numbers)
+int mpf_lngamma(mp_float *a, mp_float *b);
+int mpf_gamma(mp_float *a, mp_float *b);
+
+/* temporary functions. if this is non-empty you have just entered
+   development area and are on your own risk from now on */
+int  mpf_inv_old(mp_float *a, mp_float *b);
+int mpf_ln_agm(mp_float * a, mp_float * b);
+int mpf_exp_new(mp_float * a, mp_float * b);
+int  mpf_cos_old(mp_float *a, mp_float *b);
+
 
 #endif

@@ -12,63 +12,65 @@
  */
 #include <tomfloat.h>
 
-/* using cos x == \sum_{n=0}^{\infty} ((-1)^n/(2n)!) * x^2n */
-int  mpf_cos(mp_float *a, mp_float *b)
+int mpf_cos(mp_float * a, mp_float * b)
 {
-   mp_float oldval, tmpovern, tmp, tmpx, res, sqr;
-   int      oddeven, err, itts;
-   long     n;
-   /* initialize temps */
-   if ((err = mpf_init_multi(b->radix, &oldval, &tmpx, &tmpovern, &tmp, &res, &sqr, NULL)) != MP_OKAY) {
-      return err;
-   }
+    mp_float x;
+    int err, k, sign;
+    long size;
 
-   /* initlialize temps */
-   /* three start at one, sqr is the square of a */
-   if ((err = mpf_const_d(&res, 1)) != MP_OKAY)                                         { goto __ERR; }
-   if ((err = mpf_const_d(&tmpovern, 1)) != MP_OKAY)                                    { goto __ERR; }
-   if ((err = mpf_const_d(&tmpx, 1)) != MP_OKAY)                                        { goto __ERR; }
-   if ((err = mpf_sqr(a, &sqr)) != MP_OKAY)                                             { goto __ERR; }
+    if (mpf_iszero(a)) {
+	return mpf_const_d(b,1);
+    }
 
-   /* this is the denom counter.  Goes up by two per pass */
-   n       = 0;
+    size = a->radix + a->exp;
+    if (size > a->radix) {
+	// raise invalid (TLOSS in SysV)?
+	// feraiseexcept(FE_INVALID)
+	// mpf_errno = E_DOM
+	// or inexact?
+	if ((err = mpf_const_nan(b)) != MP_OKAY) {
+	    return err;
+	}
+	return MP_VAL;
+    }
+    sign = a->mantissa.sign;
+    if ((err = mpf_init(&x, a->radix)) != MP_OKAY) {
+	return err;
+    }
+    if ((err = mpf_trig_arg_reduct(a, &x, &k)) != MP_OKAY) {
+	goto _ERR;
+    }
+    k = k % 4;
 
-   /* we alternate between adding and subtracting */
-   oddeven = 1;
-
-   /* get number of iterations */
-   itts = mpf_iterations(b);
-
-   while (itts-- > 0) {
-       if ((err = mpf_copy(&res, &oldval)) != MP_OKAY)                                  { goto __ERR; }
-       /* compute 1/(2n)! from 1/(2(n-1))! by multiplying by (1/n)(1/(n+1)) */
-       if ((err = mpf_const_d(&tmp, ++n)) != MP_OKAY)                                   { goto __ERR; }
-       if ((err = mpf_inv(&tmp, &tmp)) != MP_OKAY)                                      { goto __ERR; }
-       if ((err = mpf_mul(&tmpovern, &tmp, &tmpovern)) != MP_OKAY)                      { goto __ERR; }
-       /* we do this twice */
-       if ((err = mpf_const_d(&tmp, ++n)) != MP_OKAY)                                   { goto __ERR; }
-       if ((err = mpf_inv(&tmp, &tmp)) != MP_OKAY)                                      { goto __ERR; }
-       if ((err = mpf_mul(&tmpovern, &tmp, &tmpovern)) != MP_OKAY)                      { goto __ERR; }
-
-       /* now multiply a into tmpx twice */
-       if ((err = mpf_mul(&tmpx, &sqr, &tmpx)) != MP_OKAY)                              { goto __ERR; }
-
-       /* now multiply the two */
-       if ((err = mpf_mul(&tmpx, &tmpovern, &tmp)) != MP_OKAY)                          { goto __ERR; }
-
-       /* now depending on if this is even or odd we add/sub */
-       oddeven ^= 1;
-       if (oddeven  == 1) {
-          if ((err = mpf_add(&res, &tmp, &res)) != MP_OKAY)                             { goto __ERR; }
-       } else {
-          if ((err = mpf_sub(&res, &tmp, &res)) != MP_OKAY)                             { goto __ERR; }
-       }
-
-       if (mpf_cmp(&res, &oldval) == MP_EQ) {
-          break;
-       }
-   }
-   mpf_exch(&res, b);
-__ERR: mpf_clear_multi(&oldval, &tmpx, &tmpovern, &tmp, &res, &sqr, NULL);
-   return err;
+    switch (k) {
+    case 0:
+	if ((err = mpf_sincos(&x, &x, 1, 0, 0)) != MP_OKAY) {
+	    goto _ERR;
+	}
+	break;
+    case 1:
+	if ((err = mpf_sincos(&x, &x, 0, 0, 0)) != MP_OKAY) {
+	    goto _ERR;
+	}
+	sign = (sign == MP_NEG) ? MP_ZPOS : MP_NEG;
+	break;
+    case 2:
+	if ((err = mpf_sincos(&x, &x, 1, 0, 0)) != MP_OKAY) {
+	    goto _ERR;
+	}
+	sign = (sign == MP_NEG) ? MP_ZPOS : MP_NEG;
+	break;
+    default:
+	if ((err = mpf_sincos(&x, &x, 0, 0, 0)) != MP_OKAY) {
+	    goto _ERR;
+	}
+	break;
+    }
+    x.mantissa.sign = sign;
+    if ((err = mpf_copy(&x, b)) != MP_OKAY) {
+	goto _ERR;
+    }
+  _ERR:
+    mpf_clear(&x);
+    return err;
 }
